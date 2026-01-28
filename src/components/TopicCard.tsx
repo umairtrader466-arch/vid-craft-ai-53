@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   FileText, 
   Mic, 
@@ -11,11 +11,19 @@ import {
   ExternalLink,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { VideoTopic, VideoStatus } from "@/types/video";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface TopicCardProps {
   topic: VideoTopic;
@@ -139,6 +147,37 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
           );
         })}
       </div>
+
+      {/* Script preview */}
+      {topic.script && (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full mb-3">
+              <Eye className="w-3 h-3 mr-1" />
+              View Script ({topic.script.split(/\s+/).filter(Boolean).length} words)
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="gradient-text">{topic.topic}</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{topic.script}</p>
+            </div>
+            <div className="flex justify-between items-center mt-4 text-xs text-muted-foreground">
+              <span>{topic.script.split(/\s+/).filter(Boolean).length} words</span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => onRegenerate(topic.id, 'script')}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Regenerate
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       
       {/* Actions */}
       {topic.status === 'video_complete' && (

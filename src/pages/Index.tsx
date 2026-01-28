@@ -5,6 +5,8 @@ import { CSVUploader } from "@/components/CSVUploader";
 import { TopicList } from "@/components/TopicList";
 import { StatsBar } from "@/components/StatsBar";
 import { PIPELINE_STEPS } from "@/types/video";
+import { processVideoTopic } from "@/lib/videoProcessing";
+import { toast } from "@/hooks/use-toast";
 import type { VideoTopic, PipelineStep } from "@/types/video";
 
 const Index = () => {
@@ -13,61 +15,84 @@ const Index = () => {
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
   );
 
+  const updateTopic = useCallback((id: string, updates: Partial<VideoTopic>) => {
+    setTopics(prev => 
+      prev.map(topic => 
+        topic.id === id ? { ...topic, ...updates } : topic
+      )
+    );
+
+    // Update pipeline status based on topic statuses
+    setTopics(currentTopics => {
+      const updatedTopics = currentTopics.map(t => 
+        t.id === id ? { ...t, ...updates } : t
+      );
+      
+      // Check if any topic has completed a step
+      const hasScriptComplete = updatedTopics.some(t => 
+        ['script_complete', 'voice_generating', 'voice_complete', 'visuals_fetching', 
+         'visuals_complete', 'video_rendering', 'video_complete', 'uploading', 'uploaded'].includes(t.status)
+      );
+      
+      if (hasScriptComplete) {
+        setPipelineSteps(prev => 
+          prev.map(step => 
+            step.id === 'script' ? { ...step, status: 'completed' } : step
+          )
+        );
+      }
+
+      return updatedTopics;
+    });
+  }, []);
+
   const handleTopicsLoaded = useCallback((newTopics: VideoTopic[]) => {
     setTopics(newTopics);
-    // Mark CSV step as complete
     setPipelineSteps(prev => 
       prev.map(step => 
         step.id === 'csv' ? { ...step, status: 'completed' } : step
       )
     );
+    toast({
+      title: "Topics loaded!",
+      description: `${newTopics.length} topics ready for processing`,
+    });
   }, []);
 
-  const handleProcess = useCallback((id: string) => {
-    // Simulate processing - this would trigger actual API calls
-    setTopics(prev => 
-      prev.map(topic => 
-        topic.id === id 
-          ? { ...topic, status: 'script_generating' } 
-          : topic
-      )
-    );
+  const handleProcess = useCallback(async (id: string) => {
+    const topic = topics.find(t => t.id === id);
+    if (!topic) return;
 
-    // Simulate pipeline progress
+    // Update pipeline to show script is processing
     setPipelineSteps(prev => 
       prev.map(step => 
         step.id === 'script' ? { ...step, status: 'processing' } : step
       )
     );
 
-    // Simulate step completion (demo purposes)
-    setTimeout(() => {
-      setTopics(prev => 
-        prev.map(topic => 
-          topic.id === id 
-            ? { ...topic, status: 'script_complete', script: 'Generated script...' } 
-            : topic
-        )
-      );
-    }, 2000);
-  }, []);
+    await processVideoTopic(id, topic.topic, updateTopic);
+  }, [topics, updateTopic]);
 
-  const handleProcessAll = useCallback(() => {
+  const handleProcessAll = useCallback(async () => {
     const pendingTopics = topics.filter(t => t.status === 'pending');
-    pendingTopics.forEach((topic, index) => {
-      setTimeout(() => handleProcess(topic.id), index * 500);
+    
+    toast({
+      title: "Processing started",
+      description: `Generating scripts for ${pendingTopics.length} topics...`,
     });
+
+    // Process sequentially to avoid rate limits
+    for (const topic of pendingTopics) {
+      await handleProcess(topic.id);
+      // Small delay between requests to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }, [topics, handleProcess]);
 
-  const handleRegenerate = useCallback((id: string, step: string) => {
-    setTopics(prev => 
-      prev.map(topic => 
-        topic.id === id 
-          ? { ...topic, status: 'pending', error: undefined } 
-          : topic
-      )
-    );
-  }, []);
+  const handleRegenerate = useCallback(async (id: string, step: string) => {
+    updateTopic(id, { status: 'pending', error: undefined, script: undefined });
+    await handleProcess(id);
+  }, [updateTopic, handleProcess]);
 
   return (
     <div className="min-h-screen bg-background">
