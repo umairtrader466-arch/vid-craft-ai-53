@@ -1,4 +1,5 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { 
   FileText, 
   Mic, 
@@ -12,10 +13,13 @@ import {
   Loader2,
   Check,
   AlertCircle,
-  Eye
+  Eye,
+  Pause,
+  Volume2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { playVoiceAudio } from "@/lib/videoProcessing";
 import type { VideoTopic, VideoStatus } from "@/types/video";
 import {
   Dialog,
@@ -56,6 +60,9 @@ const STEPS = [
 ];
 
 export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  
   const config = STATUS_CONFIG[topic.status];
   const StatusIcon = config.icon;
   
@@ -77,6 +84,21 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
     if (stepIndex < currentIndex) return 'completed';
     if (stepIndex === currentIndex) return isProcessing ? 'processing' : 'completed';
     return 'pending';
+  };
+
+  const handlePlayVoice = () => {
+    if (!topic.voiceBase64) return;
+    
+    if (isPlaying && audioElement) {
+      audioElement.pause();
+      setIsPlaying(false);
+      return;
+    }
+    
+    const audio = playVoiceAudio(topic.voiceBase64);
+    audio.onended = () => setIsPlaying(false);
+    setAudioElement(audio);
+    setIsPlaying(true);
   };
 
   return (
@@ -152,7 +174,7 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
       {topic.script && (
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full mb-3">
+            <Button variant="outline" size="sm" className="w-full mb-2">
               <Eye className="w-3 h-3 mr-1" />
               View Script ({topic.script.split(/\s+/).filter(Boolean).length} words)
             </Button>
@@ -174,6 +196,70 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
                 <RotateCcw className="w-3 h-3 mr-1" />
                 Regenerate
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Voice playback */}
+      {topic.voiceBase64 && (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="w-full mb-2"
+          onClick={handlePlayVoice}
+        >
+          {isPlaying ? (
+            <>
+              <Pause className="w-3 h-3 mr-1" />
+              Pause Voice
+            </>
+          ) : (
+            <>
+              <Volume2 className="w-3 h-3 mr-1" />
+              Play Voice
+            </>
+          )}
+        </Button>
+      )}
+
+      {/* Visuals preview */}
+      {topic.visuals && topic.visuals.length > 0 && (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full mb-2">
+              <Image className="w-3 h-3 mr-1" />
+              View Visuals ({topic.visuals.length} assets)
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="gradient-text">Visual Assets</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {topic.visuals.map((visual) => (
+                <div 
+                  key={visual.id} 
+                  className="relative aspect-video rounded-lg overflow-hidden bg-muted border border-border group"
+                >
+                  <img 
+                    src={visual.previewUrl} 
+                    alt="Visual asset"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="text-center text-white text-xs">
+                      <p className="font-medium capitalize">{visual.type}</p>
+                      <p className="text-white/70">{visual.source}</p>
+                    </div>
+                  </div>
+                  {visual.type === 'video' && (
+                    <div className="absolute top-2 right-2 bg-black/70 rounded px-1.5 py-0.5">
+                      <Film className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </DialogContent>
         </Dialog>
