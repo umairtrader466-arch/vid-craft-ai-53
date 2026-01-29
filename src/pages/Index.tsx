@@ -4,6 +4,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { CSVUploader } from "@/components/CSVUploader";
 import { TopicList } from "@/components/TopicList";
 import { StatsBar } from "@/components/StatsBar";
+import { VoiceSettings } from "@/components/VoiceSettings";
 import { PIPELINE_STEPS } from "@/types/video";
 import { processVideoTopic } from "@/lib/videoProcessing";
 import { toast } from "@/hooks/use-toast";
@@ -11,6 +12,7 @@ import type { VideoTopic, PipelineStep } from "@/types/video";
 
 const Index = () => {
   const [topics, setTopics] = useState<VideoTopic[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>('george');
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>(
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
   );
@@ -28,19 +30,30 @@ const Index = () => {
         t.id === id ? { ...t, ...updates } : t
       );
       
-      // Check if any topic has completed a step
+      // Check completion status for each step
       const hasScriptComplete = updatedTopics.some(t => 
         ['script_complete', 'voice_generating', 'voice_complete', 'visuals_fetching', 
          'visuals_complete', 'video_rendering', 'video_complete', 'uploading', 'uploaded'].includes(t.status)
       );
       
-      if (hasScriptComplete) {
-        setPipelineSteps(prev => 
-          prev.map(step => 
-            step.id === 'script' ? { ...step, status: 'completed' } : step
-          )
-        );
-      }
+      const hasVoiceComplete = updatedTopics.some(t => 
+        ['voice_complete', 'visuals_fetching', 'visuals_complete', 
+         'video_rendering', 'video_complete', 'uploading', 'uploaded'].includes(t.status)
+      );
+
+      const hasVisualsComplete = updatedTopics.some(t => 
+        ['visuals_complete', 'video_rendering', 'video_complete', 
+         'uploading', 'uploaded'].includes(t.status)
+      );
+
+      setPipelineSteps(prev => 
+        prev.map(step => {
+          if (step.id === 'script' && hasScriptComplete) return { ...step, status: 'completed' };
+          if (step.id === 'voice' && hasVoiceComplete) return { ...step, status: 'completed' };
+          if (step.id === 'visuals' && hasVisualsComplete) return { ...step, status: 'completed' };
+          return step;
+        })
+      );
 
       return updatedTopics;
     });
@@ -70,27 +83,33 @@ const Index = () => {
       )
     );
 
-    await processVideoTopic(id, topic.topic, updateTopic);
-  }, [topics, updateTopic]);
+    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic);
+  }, [topics, selectedVoice, updateTopic]);
 
   const handleProcessAll = useCallback(async () => {
     const pendingTopics = topics.filter(t => t.status === 'pending');
     
     toast({
       title: "Processing started",
-      description: `Generating scripts for ${pendingTopics.length} topics...`,
+      description: `Generating content for ${pendingTopics.length} topics...`,
     });
 
     // Process sequentially to avoid rate limits
     for (const topic of pendingTopics) {
       await handleProcess(topic.id);
       // Small delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }, [topics, handleProcess]);
 
   const handleRegenerate = useCallback(async (id: string, step: string) => {
-    updateTopic(id, { status: 'pending', error: undefined, script: undefined });
+    updateTopic(id, { 
+      status: 'pending', 
+      error: undefined, 
+      script: undefined,
+      voiceBase64: undefined,
+      visuals: undefined
+    });
     await handleProcess(id);
   }, [updateTopic, handleProcess]);
 
@@ -108,9 +127,15 @@ const Index = () => {
         <main className="pb-12 space-y-6">
           <PipelineProgress steps={pipelineSteps} />
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1">
               <CSVUploader onTopicsLoaded={handleTopicsLoaded} />
+            </div>
+            <div className="lg:col-span-1">
+              <VoiceSettings 
+                selectedVoice={selectedVoice} 
+                onVoiceChange={setSelectedVoice} 
+              />
             </div>
             <div className="lg:col-span-2">
               <StatsBar topics={topics} />

@@ -18,11 +18,20 @@ export interface VideoTopic {
   status: VideoStatus;
   script?: string;
   voiceUrl?: string;
-  visuals?: string[];
+  voiceBase64?: string;
+  visuals?: VisualAsset[];
   videoUrl?: string;
   youtubeUrl?: string;
   error?: string;
   createdAt: Date;
+}
+
+export interface VisualAsset {
+  id: string;
+  type: 'video' | 'image';
+  source: 'pixabay' | 'pexels';
+  url: string;
+  previewUrl: string;
 }
 
 export interface PipelineStep {
