@@ -44,7 +44,7 @@ const STATUS_CONFIG: Record<VideoStatus, { label: string; color: string; icon: R
   voice_complete: { label: 'Voice Ready', color: 'text-success', icon: Mic },
   visuals_fetching: { label: 'Fetching Visuals...', color: 'text-warning', icon: Image },
   visuals_complete: { label: 'Visuals Ready', color: 'text-success', icon: Image },
-  video_rendering: { label: 'Rendering Video...', color: 'text-warning', icon: Film },
+  video_rendering: { label: 'Rendering...', color: 'text-warning', icon: Film },
   video_complete: { label: 'Video Ready', color: 'text-success', icon: Film },
   uploading: { label: 'Uploading...', color: 'text-warning', icon: Youtube },
   uploaded: { label: 'Uploaded!', color: 'text-success', icon: Youtube },
@@ -264,13 +264,31 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Render progress */}
+      {topic.status === 'video_rendering' && topic.renderProgress !== undefined && (
+        <div className="mb-2">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>Rendering video...</span>
+            <span>{Math.round(topic.renderProgress)}%</span>
+          </div>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-primary transition-all duration-300"
+              style={{ width: `${topic.renderProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
       
       {/* Actions */}
-      {topic.status === 'video_complete' && (
+      {topic.status === 'video_complete' && topic.videoUrl && (
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="flex-1">
-            <Download className="w-3 h-3 mr-1" />
-            Download
+          <Button size="sm" variant="outline" className="flex-1" asChild>
+            <a href={topic.videoUrl} target="_blank" rel="noopener noreferrer" download>
+              <Download className="w-3 h-3 mr-1" />
+              Download
+            </a>
           </Button>
           <Button size="sm" className="flex-1 bg-gradient-primary hover:opacity-90">
             <Youtube className="w-3 h-3 mr-1" />

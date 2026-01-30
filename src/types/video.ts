@@ -20,6 +20,8 @@ export interface VideoTopic {
   voiceUrl?: string;
   voiceBase64?: string;
   visuals?: VisualAsset[];
+  renderId?: string;
+  renderProgress?: number;
   videoUrl?: string;
   youtubeUrl?: string;
   error?: string;

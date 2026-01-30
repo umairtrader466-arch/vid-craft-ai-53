@@ -20,6 +20,21 @@ interface FetchVisualsResult {
   totalFound: number;
 }
 
+interface RenderVideoResult {
+  renderId: string;
+  status: string;
+  url?: string;
+  estimatedDuration: number;
+}
+
+interface CheckRenderStatusResult {
+  renderId: string;
+  status: 'planned' | 'rendering' | 'succeeded' | 'failed';
+  url?: string;
+  progress?: number;
+  error?: string;
+}
+
 export async function generateScript(topic: string): Promise<GenerateScriptResult> {
   const { data, error } = await supabase.functions.invoke<GenerateScriptResult>('generate-script', {
     body: { topic }
@@ -71,6 +86,45 @@ export async function fetchVisuals(script: string, topic: string): Promise<Fetch
   return data;
 }
 
+export async function renderVideo(
+  topic: string,
+  audioBase64: string,
+  visuals: VisualAsset[],
+  audioDuration?: number
+): Promise<RenderVideoResult> {
+  const { data, error } = await supabase.functions.invoke<RenderVideoResult>('render-video', {
+    body: { topic, audioBase64, visuals, audioDuration }
+  });
+
+  if (error) {
+    console.error('Error rendering video:', error);
+    throw new Error(error.message || 'Failed to render video');
+  }
+
+  if (!data) {
+    throw new Error('No response from video rendering');
+  }
+
+  return data;
+}
+
+export async function checkRenderStatus(renderId: string): Promise<CheckRenderStatusResult> {
+  const { data, error } = await supabase.functions.invoke<CheckRenderStatusResult>('check-render-status', {
+    body: { renderId }
+  });
+
+  if (error) {
+    console.error('Error checking render status:', error);
+    throw new Error(error.message || 'Failed to check render status');
+  }
+
+  if (!data) {
+    throw new Error('No response from render status check');
+  }
+
+  return data;
+}
+
 export async function processVideoTopic(
   topicId: string,
   topicText: string,
@@ -103,19 +157,59 @@ export async function processVideoTopic(
     
     const visualsResult = await fetchVisuals(scriptResult.script, topicText);
     
+    const mappedVisuals = visualsResult.visuals.map(v => ({
+      id: v.id,
+      type: v.type,
+      source: v.source,
+      url: v.url,
+      previewUrl: v.previewUrl,
+    }));
+
     onUpdate(topicId, { 
       status: 'visuals_complete',
-      visuals: visualsResult.visuals.map(v => ({
-        id: v.id,
-        type: v.type,
-        source: v.source,
-        url: v.url,
-        previewUrl: v.previewUrl,
-      }))
+      visuals: mappedVisuals
     });
 
-    // Future steps: Video rendering and YouTube upload would go here
-    // For now, mark as visuals complete
+    // Step 4: Render video
+    onUpdate(topicId, { status: 'video_rendering' });
+    
+    const renderResult = await renderVideo(
+      topicText,
+      voiceResult.audioBase64,
+      mappedVisuals,
+      voiceResult.duration
+    );
+
+    onUpdate(topicId, { 
+      renderId: renderResult.renderId,
+      renderProgress: 0
+    });
+
+    // Poll for render completion
+    let renderStatus = renderResult.status;
+    while (renderStatus !== 'succeeded' && renderStatus !== 'failed') {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Poll every 5 seconds
+      
+      const statusResult = await checkRenderStatus(renderResult.renderId);
+      renderStatus = statusResult.status;
+      
+      if (statusResult.progress !== undefined) {
+        onUpdate(topicId, { renderProgress: statusResult.progress * 100 });
+      }
+      
+      if (statusResult.status === 'succeeded' && statusResult.url) {
+        onUpdate(topicId, { 
+          status: 'video_complete',
+          videoUrl: statusResult.url,
+          renderProgress: 100
+        });
+        break;
+      }
+      
+      if (statusResult.status === 'failed') {
+        throw new Error(statusResult.error || 'Video rendering failed');
+      }
+    }
 
   } catch (error) {
     console.error('Error processing topic:', error);
