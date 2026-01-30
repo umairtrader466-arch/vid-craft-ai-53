@@ -86,6 +86,19 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
     setError(null);
   };
 
+  const loadSampleTopics = () => {
+    const sampleTopics: VideoTopic[] = [
+      {
+        id: `sample-${Date.now()}-1`,
+        topic: "5 Tips for Better Sleep",
+        status: 'pending',
+        createdAt: new Date(),
+      }
+    ];
+    onTopicsLoaded(sampleTopics);
+    setFile(new File(["sample"], "sample-topics.csv", { type: "text/csv" }));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -134,10 +147,23 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
                 or click to browse
               </p>
               
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                 <FileText className="w-3 h-3" />
                 <span>CSV with 'topic' column required</span>
               </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  loadSampleTopics();
+                }}
+                className="text-xs"
+              >
+                Load Sample Topic
+              </Button>
             </label>
             
             {error && (

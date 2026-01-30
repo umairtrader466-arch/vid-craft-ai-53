@@ -100,7 +100,18 @@ serve(async (req) => {
       elements.push(element);
     });
 
+    // Build the render script (source)
+    const renderScript = {
+      output_format: 'mp4',
+      width: 1920,
+      height: 1080,
+      frame_rate: 30,
+      duration: targetDuration,
+      elements,
+    };
+
     // Create render job via Creatomate API
+    // Note: source must be a stringified JSON for render script mode
     const renderResponse = await fetch('https://api.creatomate.com/v1/renders', {
       method: 'POST',
       headers: {
@@ -108,16 +119,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        output_format: 'mp4',
-        width: 1920,
-        height: 1080,
-        frame_rate: 30,
-        duration: targetDuration,
-        elements,
-        metadata: {
-          topic,
-          created_at: new Date().toISOString(),
-        },
+        source: JSON.stringify(renderScript),
       }),
     });
 
