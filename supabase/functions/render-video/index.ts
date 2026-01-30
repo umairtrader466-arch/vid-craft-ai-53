@@ -69,7 +69,10 @@ serve(async (req) => {
       type: 'audio',
       track: 1,
       time: 0,
-      source: audioDataUri,
+      source: {
+        type: 'data',
+        data: audioBase64,
+      },
       audio_fade_out: 1,
     });
 
@@ -81,7 +84,10 @@ serve(async (req) => {
         track: 2,
         time: startTime,
         duration: segmentDuration + 0.5, // Slight overlap for smooth transitions
-        source: visual.url,
+        source: {
+          type: 'url',
+          src: visual.url,
+        },
         fit: 'cover',
         x: '50%',
         y: '50%',
@@ -109,6 +115,10 @@ serve(async (req) => {
       duration: targetDuration,
       elements,
     };
+console.log(
+  'FINAL PAYLOAD:',
+  JSON.stringify({ source: renderScript }, null, 2)
+);
 
     // Create render job via Creatomate API
     // Note: source must be a stringified JSON for render script mode
