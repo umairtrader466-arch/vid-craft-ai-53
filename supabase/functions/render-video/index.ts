@@ -105,7 +105,7 @@ serve(async (req) => {
 
       elements.push(element);
     });
-
+console.log("Working till here");
     // Build the render script (source)
     const renderScript = {
       output_format: 'mp4',
@@ -115,11 +115,12 @@ serve(async (req) => {
       duration: targetDuration,
       elements,
     };
+    console.log("Working till here2");
 console.log(
   'FINAL PAYLOAD:',
   JSON.stringify({ source: renderScript }, null, 2)
 );
-
+console.log("Working till here3");
     // Create render job via Creatomate API
     // Note: source must be a stringified JSON for render script mode
     const renderResponse = await fetch('https://api.creatomate.com/v1/renders', {
