@@ -9,9 +9,11 @@ interface TopicListProps {
   onProcess: (id: string) => void;
   onRegenerate: (id: string, step: string) => void;
   onProcessAll: () => void;
+  onUploadComplete: (id: string, youtubeUrl: string) => void;
+  privacyStatus: 'public' | 'unlisted';
 }
 
-export function TopicList({ topics, onProcess, onRegenerate, onProcessAll }: TopicListProps) {
+export function TopicList({ topics, onProcess, onRegenerate, onProcessAll, onUploadComplete, privacyStatus }: TopicListProps) {
   const pendingCount = topics.filter(t => t.status === 'pending').length;
   const completedCount = topics.filter(t => t.status === 'uploaded' || t.status === 'video_complete').length;
 
@@ -68,6 +70,8 @@ export function TopicList({ topics, onProcess, onRegenerate, onProcessAll }: Top
               index={index}
               onProcess={onProcess}
               onRegenerate={onRegenerate}
+              onUploadComplete={onUploadComplete}
+              privacyStatus={privacyStatus}
             />
           ))}
         </AnimatePresence>

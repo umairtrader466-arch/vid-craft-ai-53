@@ -5,6 +5,7 @@ import { CSVUploader } from "@/components/CSVUploader";
 import { TopicList } from "@/components/TopicList";
 import { StatsBar } from "@/components/StatsBar";
 import { VoiceSettings } from "@/components/VoiceSettings";
+import { YouTubeConnect } from "@/components/YouTubeConnect";
 import { PIPELINE_STEPS } from "@/types/video";
 import { processVideoTopic } from "@/lib/videoProcessing";
 import { toast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ import type { VideoTopic, PipelineStep } from "@/types/video";
 const Index = () => {
   const [topics, setTopics] = useState<VideoTopic[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>('george');
+  const [youtubePrivacy, setYoutubePrivacy] = useState<'public' | 'unlisted'>('unlisted');
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>(
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
   );
@@ -113,6 +115,13 @@ const Index = () => {
     await handleProcess(id);
   }, [updateTopic, handleProcess]);
 
+  const handleUploadComplete = useCallback((id: string, youtubeUrl: string) => {
+    updateTopic(id, { 
+      status: 'uploaded', 
+      youtubeUrl 
+    });
+  }, [updateTopic]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Background gradient effect */}
@@ -137,7 +146,13 @@ const Index = () => {
                 onVoiceChange={setSelectedVoice} 
               />
             </div>
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-1">
+              <YouTubeConnect 
+                privacyStatus={youtubePrivacy}
+                onPrivacyChange={setYoutubePrivacy}
+              />
+            </div>
+            <div className="lg:col-span-1">
               <StatsBar topics={topics} />
             </div>
           </div>
@@ -147,6 +162,8 @@ const Index = () => {
             onProcess={handleProcess}
             onRegenerate={handleRegenerate}
             onProcessAll={handleProcessAll}
+            onUploadComplete={handleUploadComplete}
+            privacyStatus={youtubePrivacy}
           />
         </main>
       </div>
