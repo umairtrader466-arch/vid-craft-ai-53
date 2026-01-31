@@ -25,7 +25,7 @@ interface CreatomateElement {
   track?: number;
   time?: number | string;
   duration?: number | string;
-  source?: string;
+  source?: string | { type: string; data?: string; src?: string };
   fit?: string;
   x?: string;
   y?: string;
@@ -105,7 +105,6 @@ serve(async (req) => {
 
       elements.push(element);
     });
-console.log("Working till here");
     // Build the render script (source)
     const renderScript = {
       output_format: 'mp4',
@@ -115,12 +114,8 @@ console.log("Working till here");
       duration: targetDuration,
       elements,
     };
-    console.log("Working till here2");
-console.log(
-  'FINAL PAYLOAD:',
-  JSON.stringify({ source: renderScript }, null, 2)
-);
-console.log("Working till here3");
+
+    console.log('Submitting render job to Creatomate...');
     // Create render job via Creatomate API
     // Note: source must be a stringified JSON for render script mode
     const renderResponse = await fetch('https://api.creatomate.com/v1/renders', {

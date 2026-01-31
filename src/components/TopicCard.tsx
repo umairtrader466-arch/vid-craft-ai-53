@@ -15,11 +15,14 @@ import {
   AlertCircle,
   Eye,
   Pause,
-  Volume2
+  Volume2,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { playVoiceAudio } from "@/lib/videoProcessing";
+import { uploadToYouTube, getStoredTokens, isTokenExpired } from "@/lib/youtubeAuth";
+import { toast } from "@/hooks/use-toast";
 import type { VideoTopic, VideoStatus } from "@/types/video";
 import {
   Dialog,
@@ -34,6 +37,8 @@ interface TopicCardProps {
   index: number;
   onProcess: (id: string) => void;
   onRegenerate: (id: string, step: string) => void;
+  onUploadComplete: (id: string, youtubeUrl: string) => void;
+  privacyStatus: 'public' | 'unlisted';
 }
 
 const STATUS_CONFIG: Record<VideoStatus, { label: string; color: string; icon: React.ElementType }> = {
@@ -59,9 +64,10 @@ const STEPS = [
   { key: 'youtube', icon: Youtube, label: 'YouTube' },
 ];
 
-export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardProps) {
+export function TopicCard({ topic, index, onProcess, onRegenerate, onUploadComplete, privacyStatus }: TopicCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const config = STATUS_CONFIG[topic.status];
   const StatusIcon = config.icon;
@@ -99,6 +105,45 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
     audio.onended = () => setIsPlaying(false);
     setAudioElement(audio);
     setIsPlaying(true);
+  };
+
+  const handleUploadToYouTube = async () => {
+    if (!topic.videoUrl) return;
+
+    const tokens = getStoredTokens();
+    if (!tokens || isTokenExpired()) {
+      toast({
+        title: "Not connected",
+        description: "Please connect your YouTube account first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadToYouTube(
+        topic.videoUrl,
+        topic.topic,
+        topic.script || topic.topic,
+        privacyStatus
+      );
+      
+      onUploadComplete(topic.id, result.youtubeUrl);
+      
+      toast({
+        title: "Uploaded to YouTube!",
+        description: `Video is now ${privacyStatus} on YouTube`,
+      });
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload to YouTube",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -290,9 +335,23 @@ export function TopicCard({ topic, index, onProcess, onRegenerate }: TopicCardPr
               Download
             </a>
           </Button>
-          <Button size="sm" className="flex-1 bg-gradient-primary hover:opacity-90">
-            <Youtube className="w-3 h-3 mr-1" />
-            Upload
+          <Button 
+            size="sm" 
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            onClick={handleUploadToYouTube}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-3 h-3 mr-1" />
+                Upload to YT
+              </>
+            )}
           </Button>
         </div>
       )}

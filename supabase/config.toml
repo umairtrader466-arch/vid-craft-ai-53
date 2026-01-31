@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.check-render-status]
 verify_jwt = false
+
+[functions.youtube-auth]
+verify_jwt = false
+
+[functions.youtube-upload]
+verify_jwt = false
