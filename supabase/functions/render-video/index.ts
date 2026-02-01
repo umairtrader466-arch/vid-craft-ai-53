@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,7 +26,7 @@ interface CreatomateElement {
   track?: number;
   time?: number | string;
   duration?: number | string;
-  source?: string | { type: string; data?: string; src?: string };
+  source?: string;
   fit?: string;
   x?: string;
   y?: string;
@@ -34,6 +35,51 @@ interface CreatomateElement {
   audio_fade_out?: number;
   audio_volume?: string;
   animations?: Array<{ type: string; duration?: number }>;
+}
+
+// Helper function to upload audio to Supabase Storage
+async function uploadAudioToStorage(audioBase64: string): Promise<string> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase configuration is missing');
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  
+  // Decode base64 to binary
+  const binaryString = atob(audioBase64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  // Generate unique filename
+  const fileName = `audio-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp3`;
+  
+  console.log(`Uploading audio file: ${fileName} (${bytes.length} bytes)`);
+
+  // Upload to storage
+  const { data, error } = await supabase.storage
+    .from('audio-files')
+    .upload(fileName, bytes, {
+      contentType: 'audio/mpeg',
+      upsert: false,
+    });
+
+  if (error) {
+    console.error('Storage upload error:', error);
+    throw new Error(`Failed to upload audio: ${error.message}`);
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('audio-files')
+    .getPublicUrl(fileName);
+
+  console.log(`Audio uploaded successfully, public URL: ${urlData.publicUrl}`);
+  return urlData.publicUrl;
 }
 
 serve(async (req) => {
@@ -55,6 +101,9 @@ serve(async (req) => {
 
     console.log(`Rendering video for topic: "${topic}" with ${visuals.length} visuals`);
 
+    // Upload audio to storage and get public URL
+    const audioUrl = await uploadAudioToStorage(audioBase64);
+
     // Calculate timing - aim for ~60 seconds or match audio duration
     const targetDuration = audioDuration || 60;
     const visualCount = visuals.length;
@@ -63,13 +112,12 @@ serve(async (req) => {
     // Build Creatomate composition
     const elements: CreatomateElement[] = [];
 
-    // Add audio track from base64
-    const audioDataUri = `data:audio/mpeg;base64,${audioBase64}`;
+    // Add audio track using the uploaded URL
     elements.push({
       type: 'audio',
       track: 1,
       time: 0,
-      source: audioDataUri, 
+      source: audioUrl,
       audio_fade_out: 1,
     });
 
