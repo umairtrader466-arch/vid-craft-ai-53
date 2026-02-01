@@ -122,8 +122,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        source: renderScript,
-      }),
+  source: JSON.stringify(renderScript),
+}),
     });
 
     if (!renderResponse.ok) {
