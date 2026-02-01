@@ -69,10 +69,7 @@ serve(async (req) => {
       type: 'audio',
       track: 1,
       time: 0,
-      source: {
-        type: 'data',
-        data: audioBase64,
-      },
+      source: audioDataUri, 
       audio_fade_out: 1,
     });
 
