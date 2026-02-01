@@ -81,10 +81,7 @@ serve(async (req) => {
         track: 2,
         time: startTime,
         duration: segmentDuration + 0.5, // Slight overlap for smooth transitions
-        source: {
-          type: 'url',
-          src: visual.url,
-        },
+        source: visual.url, // Creatomate expects a string URL, not an object
         fit: 'cover',
         x: '50%',
         y: '50%',
