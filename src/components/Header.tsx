@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Video, Sparkles } from "lucide-react";
+import { UserMenu } from "./UserMenu";
 
 export function Header() {
   return (
@@ -29,10 +30,11 @@ export function Header() {
       </div>
       
       <div className="flex items-center gap-4">
-        <div className="text-right">
+        <div className="text-right hidden sm:block">
           <p className="text-sm text-muted-foreground">Ready to create</p>
           <p className="text-xs text-primary">Upload CSV to start</p>
         </div>
+        <UserMenu />
       </div>
     </motion.header>
   );
