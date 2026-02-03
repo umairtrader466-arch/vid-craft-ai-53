@@ -39,7 +39,8 @@ serve(async (req) => {
       throw new Error('Script is required');
     }
 
-    const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    // const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    const ELEVENLABS_API_KEY = 'sk_6675752d7e4d21e6a68cbd14833857e3faaf82ced699ef05';
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
