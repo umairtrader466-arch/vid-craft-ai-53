@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { CSVUploader } from "@/components/CSVUploader";
@@ -9,15 +9,69 @@ import { YouTubeConnect } from "@/components/YouTubeConnect";
 import { PIPELINE_STEPS } from "@/types/video";
 import { processVideoTopic } from "@/lib/videoProcessing";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import type { VideoTopic, PipelineStep } from "@/types/video";
 
 const Index = () => {
+  const { user } = useAuth();
   const [topics, setTopics] = useState<VideoTopic[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<string>('george');
   const [youtubePrivacy, setYoutubePrivacy] = useState<'public' | 'unlisted'>('unlisted');
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>(
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
   );
+
+  // Load topics from database on mount
+  useEffect(() => {
+    const loadTopics = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('video_topics')
+          .select('*')
+          .order('scheduled_at', { ascending: true });
+
+        if (error) throw error;
+
+        const loadedTopics: VideoTopic[] = (data || []).map((row) => ({
+          id: row.id,
+          topic: row.topic,
+          status: row.status as VideoTopic['status'],
+          script: row.script || undefined,
+          voiceUrl: row.voice_url || undefined,
+          videoUrl: row.video_url || undefined,
+          youtubeUrl: row.youtube_url || undefined,
+          createdAt: new Date(row.created_at),
+          scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
+        }));
+
+        setTopics(loadedTopics);
+        
+        // Update pipeline status if topics exist
+        if (loadedTopics.length > 0) {
+          setPipelineSteps(prev => 
+            prev.map(step => 
+              step.id === 'csv' ? { ...step, status: 'completed' } : step
+            )
+          );
+        }
+      } catch (err) {
+        console.error('Error loading topics:', err);
+        toast({
+          title: "Error loading topics",
+          description: "Could not load your saved topics",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTopics();
+  }, [user]);
 
   const updateTopic = useCallback((id: string, updates: Partial<VideoTopic>) => {
     setTopics(prev => 

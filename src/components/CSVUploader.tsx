@@ -4,6 +4,11 @@ import { Upload, FileText, X, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Papa from "papaparse";
+import { addDays, addHours, setHours, setMinutes } from "date-fns";
+import { ScheduleDialog, type ScheduleConfig } from "./ScheduleDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 import type { VideoTopic } from "@/types/video";
 
 interface CSVUploaderProps {
@@ -11,10 +16,14 @@ interface CSVUploaderProps {
 }
 
 export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [pendingTopics, setPendingTopics] = useState<VideoTopic[]>([]);
 
   const processCSV = useCallback((file: File) => {
     setIsProcessing(true);
@@ -51,8 +60,10 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
           return;
         }
 
+        // Store topics temporarily and show schedule dialog
+        setPendingTopics(topics);
         setFile(file);
-        onTopicsLoaded(topics);
+        setShowScheduleDialog(true);
       },
       error: (err) => {
         setIsProcessing(false);
@@ -60,7 +71,76 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
         setFile(null);
       },
     });
-  }, [onTopicsLoaded]);
+  }, []);
+
+  const handleScheduleConfirm = useCallback(async (config: ScheduleConfig) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save topics",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    setShowScheduleDialog(false);
+
+    // Calculate scheduled times for each topic
+    const [hours, minutes] = config.startTime.split(":").map(Number);
+    const baseDate = setMinutes(setHours(config.startDate, hours), minutes);
+
+    const topicsWithSchedule = pendingTopics.map((topic, index) => {
+      const dayIndex = Math.floor(index / config.videosPerDay);
+      const videoIndexInDay = index % config.videosPerDay;
+      const scheduledAt = addHours(
+        addDays(baseDate, dayIndex),
+        videoIndexInDay * config.hoursBetweenVideos
+      );
+
+      return {
+        user_id: user.id,
+        topic: topic.topic,
+        status: 'pending',
+        scheduled_at: scheduledAt.toISOString(),
+      };
+    });
+
+    try {
+      const { data, error: insertError } = await supabase
+        .from('video_topics')
+        .insert(topicsWithSchedule)
+        .select();
+
+      if (insertError) throw insertError;
+
+      // Update local state with database IDs
+      const savedTopics: VideoTopic[] = (data || []).map((row) => ({
+        id: row.id,
+        topic: row.topic,
+        status: row.status as VideoTopic['status'],
+        createdAt: new Date(row.created_at),
+        scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
+      }));
+
+      onTopicsLoaded(savedTopics);
+      toast({
+        title: "Topics saved!",
+        description: `${savedTopics.length} topics scheduled for publishing`,
+      });
+    } catch (err) {
+      console.error('Error saving topics:', err);
+      toast({
+        title: "Error saving topics",
+        description: err instanceof Error ? err.message : "Please try again",
+        variant: "destructive",
+      });
+      setFile(null);
+    } finally {
+      setIsSaving(false);
+      setPendingTopics([]);
+    }
+  }, [user, pendingTopics, onTopicsLoaded]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -95,8 +175,9 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
         createdAt: new Date(),
       }
     ];
-    onTopicsLoaded(sampleTopics);
+    setPendingTopics(sampleTopics);
     setFile(new File(["sample"], "sample-topics.csv", { type: "text/csv" }));
+    setShowScheduleDialog(true);
   };
 
   return (
@@ -205,6 +286,27 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ScheduleDialog
+        open={showScheduleDialog}
+        onOpenChange={(open) => {
+          setShowScheduleDialog(open);
+          if (!open && pendingTopics.length > 0) {
+            // User cancelled - clear file
+            setFile(null);
+            setPendingTopics([]);
+          }
+        }}
+        topicsCount={pendingTopics.length}
+        onConfirm={handleScheduleConfirm}
+      />
+
+      {isSaving && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+          Saving topics to database...
+        </div>
+      )}
     </motion.div>
   );
 }
