@@ -54,6 +54,7 @@ serve(async (req) => {
       selectedVoiceId = VOICE_OPTIONS['george']; // Default to George - professional male voice
     }
 
+    console.log("ELEVENLABS_API_KEY",ELEVENLABS_API_KEY);
     console.log(`Generating voice for script (${script.length} chars) with voice ID: ${selectedVoiceId}`);
 
     const response = await fetch(
