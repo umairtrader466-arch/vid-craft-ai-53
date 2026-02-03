@@ -26,6 +26,7 @@ export interface VideoTopic {
   youtubeUrl?: string;
   error?: string;
   createdAt: Date;
+  scheduledAt?: Date;
 }
 
 export interface VisualAsset {
