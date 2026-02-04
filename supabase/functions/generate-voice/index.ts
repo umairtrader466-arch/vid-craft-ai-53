@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     console.log("ELEVENLABS_API_KEY",ELEVENLABS_API_KEY);
-    console.log(`Generating voice for script (${script.length} chars) with voice ID: ${selectedVoiceId}`);
+    console.log(`Generating voice for script (${script.length} chars) with voice ID: ${selectedVoiceId}, key :${ELEVENLABS_API_KEY}`);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}?output_format=mp3_44100_128`,
