@@ -52,7 +52,24 @@ export async function generateScript(topic: string): Promise<GenerateScriptResul
   return data;
 }
 
-export async function generateVoice(script: string, voiceName: string): Promise<GenerateVoiceResult> {
+export async function generateVoice(script: string, voiceName: string, provider: 'elevenlabs' | 'ttsmp3' = 'elevenlabs', ttsmp3Voice?: string): Promise<GenerateVoiceResult> {
+  if (provider === 'ttsmp3') {
+    const { data, error } = await supabase.functions.invoke<GenerateVoiceResult>('generate-voice-ttsmp3', {
+      body: { script, lang: ttsmp3Voice || 'Joanna' }
+    });
+
+    if (error) {
+      console.error('Error generating TTSMP3 voice:', error);
+      throw new Error(error.message || 'Failed to generate voice via TTSMP3');
+    }
+
+    if (!data) {
+      throw new Error('No response from TTSMP3 voice generation');
+    }
+
+    return data;
+  }
+
   const { data, error } = await supabase.functions.invoke<GenerateVoiceResult>('generate-voice', {
     body: { script, voiceName }
   });
@@ -129,7 +146,9 @@ export async function processVideoTopic(
   topicId: string,
   topicText: string,
   voiceName: string,
-  onUpdate: (id: string, updates: Partial<VideoTopic>) => void
+  onUpdate: (id: string, updates: Partial<VideoTopic>) => void,
+  voiceProvider: 'elevenlabs' | 'ttsmp3' = 'elevenlabs',
+  ttsmp3Voice?: string
 ): Promise<void> {
   try {
     // Step 1: Generate script
@@ -145,7 +164,7 @@ export async function processVideoTopic(
     // Step 2: Generate voice
     onUpdate(topicId, { status: 'voice_generating' });
     
-    const voiceResult = await generateVoice(scriptResult.script, voiceName);
+    const voiceResult = await generateVoice(scriptResult.script, voiceName, voiceProvider, ttsmp3Voice);
     
     onUpdate(topicId, { 
       status: 'voice_complete',

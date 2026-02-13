@@ -18,6 +18,8 @@ const Index = () => {
   const [topics, setTopics] = useState<VideoTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<string>('george');
+  const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'ttsmp3'>('elevenlabs');
+  const [selectedTtsmp3Voice, setSelectedTtsmp3Voice] = useState<string>('Joanna');
   const [youtubePrivacy, setYoutubePrivacy] = useState<'public' | 'unlisted'>('unlisted');
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>(
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
@@ -139,8 +141,8 @@ const Index = () => {
       )
     );
 
-    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic);
-  }, [topics, selectedVoice, updateTopic]);
+    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice);
+  }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice]);
 
   const handleProcessAll = useCallback(async () => {
     const pendingTopics = topics.filter(t => t.status === 'pending');
@@ -195,9 +197,13 @@ const Index = () => {
               <CSVUploader onTopicsLoaded={handleTopicsLoaded} />
             </div>
             <div className="lg:col-span-1">
-              <VoiceSettings 
+            <VoiceSettings 
                 selectedVoice={selectedVoice} 
-                onVoiceChange={setSelectedVoice} 
+                onVoiceChange={setSelectedVoice}
+                voiceProvider={voiceProvider}
+                onProviderChange={setVoiceProvider}
+                selectedTtsmp3Voice={selectedTtsmp3Voice}
+                onTtsmp3VoiceChange={setSelectedTtsmp3Voice}
               />
             </div>
             <div className="lg:col-span-1">
