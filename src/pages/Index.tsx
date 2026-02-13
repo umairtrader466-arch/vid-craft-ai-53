@@ -19,7 +19,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<string>('george');
   const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'ttsmp3'>('elevenlabs');
-  const [selectedTtsmp3Voice, setSelectedTtsmp3Voice] = useState<string>('Joanna');
+  const [selectedTtsmp3Voice, setSelectedTtsmp3Voice] = useState<string>('Kimberly');
   const [youtubePrivacy, setYoutubePrivacy] = useState<'public' | 'unlisted'>('unlisted');
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>(
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
