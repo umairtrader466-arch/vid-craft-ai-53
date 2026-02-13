@@ -41,81 +41,94 @@ export interface TtsmpVoiceOption {
 }
 
 export const TTSMP3_VOICE_OPTIONS: TtsmpVoiceOption[] = [
-  { value: "Joanna", label: "Joanna (English - US, Female)" },
-  { value: "Ivy", label: "Ivy (English - US, Female)" },
-  { value: "Kendra", label: "Kendra (English - US, Female)" },
-  { value: "Kimberly", label: "Kimberly (English - US, Female)" },
-  { value: "Salli", label: "Salli (English - US, Female)" },
-  { value: "Joey", label: "Joey (English - US, Male)" },
-  { value: "Justin", label: "Justin (English - US, Male)" },
-  { value: "Kevin", label: "Kevin (English - US, Male)" },
-  { value: "Matthew", label: "Matthew (English - US, Male)" },
-  { value: "Ruth", label: "Ruth (English - US, Female)" },
-  { value: "Stephen", label: "Stephen (English - US, Male)" },
-  { value: "Brian", label: "Brian (English - UK, Male)" },
-  { value: "Amy", label: "Amy (English - UK, Female)" },
-  { value: "Emma", label: "Emma (English - UK, Female)" },
-  { value: "Arthur", label: "Arthur (English - UK, Male)" },
-  { value: "Raveena", label: "Raveena (English - IN, Female)" },
-  { value: "Kajal", label: "Kajal (English - IN, Female)" },
-  { value: "Niamh", label: "Niamh (English - IE, Female)" },
-  { value: "Aria", label: "Aria (English - NZ, Female)" },
-  { value: "Ayanda", label: "Ayanda (English - ZA, Female)" },
-  { value: "Olivia", label: "Olivia (English - AU, Female)" },
-  { value: "Zhiyu", label: "Zhiyu (Chinese, Female)" },
-  { value: "Hiujin", label: "Hiujin (Chinese - Cantonese, Female)" },
-  { value: "Léa", label: "Léa (French, Female)" },
-  { value: "Rémi", label: "Rémi (French, Male)" },
-  { value: "Vicki", label: "Vicki (German, Female)" },
-  { value: "Daniel", label: "Daniel (German, Male)" },
-  { value: "Hans", label: "Hans (German, Male)" },
-  { value: "Marlene", label: "Marlene (German, Female)" },
-  { value: "Aditi", label: "Aditi (Hindi, Female)" },
-  { value: "Kajal_hi", label: "Kajal (Hindi, Female)" },
-  { value: "Carla", label: "Carla (Italian, Female)" },
-  { value: "Bianca", label: "Bianca (Italian, Female)" },
-  { value: "Adriano", label: "Adriano (Italian, Male)" },
-  { value: "Takumi", label: "Takumi (Japanese, Male)" },
-  { value: "Kazuha", label: "Kazuha (Japanese, Female)" },
-  { value: "Tomoko", label: "Tomoko (Japanese, Female)" },
-  { value: "Seoyeon", label: "Seoyeon (Korean, Female)" },
-  { value: "Lúcia", label: "Lúcia (Portuguese - BR, Female)" },
-  { value: "Camila", label: "Camila (Portuguese - BR, Female)" },
-  { value: "Vitória", label: "Vitória (Portuguese - BR, Female)" },
-  { value: "Inês", label: "Inês (Portuguese - PT, Female)" },
-  { value: "Conchita", label: "Conchita (Spanish - ES, Female)" },
-  { value: "Lucia", label: "Lucia (Spanish - ES, Female)" },
-  { value: "Sergio", label: "Sergio (Spanish - ES, Male)" },
-  { value: "Mia", label: "Mia (Spanish - MX, Female)" },
-  { value: "Andrés", label: "Andrés (Spanish - MX, Male)" },
-  { value: "Lupe", label: "Lupe (Spanish - US, Female)" },
-  { value: "Penélope", label: "Penélope (Spanish - US, Female)" },
-  { value: "Miguel", label: "Miguel (Spanish - US, Male)" },
-  { value: "Pedro", label: "Pedro (Spanish - US, Male)" },
-  { value: "Elin", label: "Elin (Swedish, Female)" },
-  { value: "Filiz", label: "Filiz (Turkish, Female)" },
-  { value: "Burcu", label: "Burcu (Turkish, Female)" },
-  { value: "Gwyneth", label: "Gwyneth (Welsh, Female)" },
-  { value: "Sofie", label: "Sofie (Danish, Female)" },
-  { value: "Suvi", label: "Suvi (Finnish, Female)" },
-  { value: "Liv", label: "Liv (Norwegian, Female)" },
-  { value: "Ewa", label: "Ewa (Polish, Female)" },
-  { value: "Maja", label: "Maja (Polish, Female)" },
-  { value: "Jacek", label: "Jacek (Polish, Male)" },
-  { value: "Jan", label: "Jan (Polish, Male)" },
-  { value: "Ola", label: "Ola (Polish, Female)" },
-  { value: "Ruben", label: "Ruben (Dutch, Male)" },
-  { value: "Lotte", label: "Lotte (Dutch, Female)" },
-  { value: "Laura_nl", label: "Laura (Dutch, Female)" },
-  { value: "Carmen", label: "Carmen (Romanian, Female)" },
-  { value: "Tatyana", label: "Tatyana (Russian, Female)" },
-  { value: "Maxim", label: "Maxim (Russian, Male)" },
-  { value: "Astrid", label: "Astrid (Swedish, Female)" },
-  { value: "Celine", label: "Céline (French, Female)" },
-  { value: "Mathieu", label: "Mathieu (French, Male)" },
-  { value: "Chantal", label: "Chantal (French - CA, Female)" },
-  { value: "Gabrielle", label: "Gabrielle (French - CA, Female)" },
-  { value: "Liam_fr", label: "Liam (French - CA, Male)" },
+  // Arabic
+  { value: "Zeina", label: "🌍 Zeina (Arabic)" },
+  // Australian English
+  { value: "Nicole", label: "🇦🇺 Nicole (Australian English, Female)" },
+  { value: "Russell", label: "🇦🇺 Russell (Australian English, Male)" },
+  // Brazilian Portuguese
+  { value: "Ricardo", label: "🇧🇷 Ricardo (Brazilian Portuguese, Male)" },
+  { value: "Camila", label: "🇧🇷 Camila (Brazilian Portuguese, Female)" },
+  { value: "Vitória", label: "🇧🇷 Vitória (Brazilian Portuguese, Female)" },
+  // British English
+  { value: "Brian", label: "🇬🇧 Brian (British English, Male)" },
+  { value: "Amy", label: "🇬🇧 Amy (British English, Female)" },
+  { value: "Emma", label: "🇬🇧 Emma (British English, Female)" },
+  // Canadian French
+  { value: "Chantal", label: "🇨🇦 Chantal (Canadian French, Female)" },
+  // Castilian Spanish
+  { value: "Enrique", label: "🇪🇸 Enrique (Castilian Spanish, Male)" },
+  { value: "Lucia", label: "🇪🇸 Lucia (Castilian Spanish, Female)" },
+  { value: "Conchita", label: "🇪🇸 Conchita (Castilian Spanish, Female)" },
+  // Chinese Mandarin
+  { value: "Zhiyu", label: "🇨🇳 Zhiyu (Chinese Mandarin, Female)" },
+  // Danish
+  { value: "Naja", label: "🇩🇰 Naja (Danish, Female)" },
+  { value: "Mads", label: "🇩🇰 Mads (Danish, Male)" },
+  // Dutch
+  { value: "Ruben", label: "🇳🇱 Ruben (Dutch, Male)" },
+  { value: "Lotte", label: "🇳🇱 Lotte (Dutch, Female)" },
+  // French
+  { value: "Mathieu", label: "🇫🇷 Mathieu (French, Male)" },
+  { value: "Celine", label: "🇫🇷 Céline (French, Female)" },
+  { value: "Léa", label: "🇫🇷 Léa (French, Female)" },
+  // German
+  { value: "Vicki", label: "🇩🇪 Vicki (German, Female)" },
+  { value: "Marlene", label: "🇩🇪 Marlene (German, Female)" },
+  { value: "Hans", label: "🇩🇪 Hans (German, Male)" },
+  // Icelandic
+  { value: "Karl", label: "🇮🇸 Karl (Icelandic, Male)" },
+  { value: "Dóra", label: "🇮🇸 Dóra (Icelandic, Female)" },
+  // Indian English
+  { value: "Aditi", label: "🇮🇳 Aditi (Indian English, Female)" },
+  { value: "Raveena", label: "🇮🇳 Raveena (Indian English, Female)" },
+  // Italian
+  { value: "Giorgio", label: "🇮🇹 Giorgio (Italian, Male)" },
+  { value: "Carla", label: "🇮🇹 Carla (Italian, Female)" },
+  { value: "Bianca", label: "🇮🇹 Bianca (Italian, Female)" },
+  // Japanese
+  { value: "Takumi", label: "🇯🇵 Takumi (Japanese, Male)" },
+  { value: "Mizuki", label: "🇯🇵 Mizuki (Japanese, Female)" },
+  // Korean
+  { value: "Seoyeon", label: "🇰🇷 Seoyeon (Korean, Female)" },
+  // Mexican Spanish
+  { value: "Mia", label: "🇲🇽 Mia (Mexican Spanish, Female)" },
+  // Norwegian
+  { value: "Liv", label: "🇳🇴 Liv (Norwegian, Female)" },
+  // Polish
+  { value: "Jan", label: "🇵🇱 Jan (Polish, Male)" },
+  { value: "Maja", label: "🇵🇱 Maja (Polish, Female)" },
+  { value: "Ewa", label: "🇵🇱 Ewa (Polish, Female)" },
+  { value: "Jacek", label: "🇵🇱 Jacek (Polish, Male)" },
+  // Portuguese
+  { value: "Cristiano", label: "🇵🇹 Cristiano (Portuguese, Male)" },
+  { value: "Inês", label: "🇵🇹 Inês (Portuguese, Female)" },
+  // Romanian
+  { value: "Carmen", label: "🇷🇴 Carmen (Romanian, Female)" },
+  // Russian
+  { value: "Tatyana", label: "🇷🇺 Tatyana (Russian, Female)" },
+  { value: "Maxim", label: "🇷🇺 Maxim (Russian, Male)" },
+  // Swedish
+  { value: "Astrid", label: "🇸🇪 Astrid (Swedish, Female)" },
+  // Turkish
+  { value: "Filiz", label: "🇹🇷 Filiz (Turkish, Female)" },
+  // US English
+  { value: "Kimberly", label: "🇺🇸 Kimberly (US English, Female)" },
+  { value: "Ivy", label: "🇺🇸 Ivy (US English, Female)" },
+  { value: "Kendra", label: "🇺🇸 Kendra (US English, Female)" },
+  { value: "Justin", label: "🇺🇸 Justin (US English, Male)" },
+  { value: "Joey", label: "🇺🇸 Joey (US English, Male)" },
+  { value: "Matthew", label: "🇺🇸 Matthew (US English, Male)" },
+  { value: "Salli", label: "🇺🇸 Salli (US English, Female)" },
+  { value: "Joanna", label: "🇺🇸 Joanna (US English, Female)" },
+  // US Spanish
+  { value: "Penélope", label: "🇺🇸 Penélope (US Spanish, Female)" },
+  { value: "Lupe", label: "🇺🇸 Lupe (US Spanish, Female)" },
+  { value: "Miguel", label: "🇺🇸 Miguel (US Spanish, Male)" },
+  // Welsh
+  { value: "Gwyneth", label: "🏴 Gwyneth (Welsh, Female)" },
+  // Welsh English
+  { value: "Geraint", label: "🏴 Geraint (Welsh English, Male)" },
 ];
 
 export type VoiceProvider = 'elevenlabs' | 'ttsmp3';
