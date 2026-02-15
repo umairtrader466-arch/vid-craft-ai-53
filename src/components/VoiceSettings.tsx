@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mic, Volume2 } from "lucide-react";
+import { Mic, Volume2, Play, Loader2 } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 
 export interface VoiceOption {
   id: string;
@@ -140,6 +142,7 @@ interface VoiceSettingsProps {
   onProviderChange: (provider: VoiceProvider) => void;
   selectedTtsmp3Voice: string;
   onTtsmp3VoiceChange: (voice: string) => void;
+  elevenlabsEnabled?: boolean;
 }
 
 export function VoiceSettings({ 
@@ -149,9 +152,44 @@ export function VoiceSettings({
   onProviderChange,
   selectedTtsmp3Voice,
   onTtsmp3VoiceChange,
+  elevenlabsEnabled = true,
 }: VoiceSettingsProps) {
+  const [isSamplePlaying, setIsSamplePlaying] = useState(false);
+  const [sampleAudio, setSampleAudio] = useState<HTMLAudioElement | null>(null);
   const selectedVoiceOption = VOICE_OPTIONS.find(v => v.id === selectedVoice);
-  const useElevenLabs = voiceProvider === 'elevenlabs';
+  const useElevenLabs = elevenlabsEnabled && voiceProvider === 'elevenlabs';
+
+  const handlePlaySample = async () => {
+    if (isSamplePlaying && sampleAudio) {
+      sampleAudio.pause();
+      setIsSamplePlaying(false);
+      return;
+    }
+
+    setIsSamplePlaying(true);
+    try {
+      const response = await fetch("https://ttsmp3.com/makemp3_new.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          msg: "Hello! This is a sample of my voice. How does it sound?",
+          lang: selectedTtsmp3Voice,
+          source: "ttsmp3",
+        }),
+      });
+      const data = await response.json();
+      if (data.Error === 0 && data.URL) {
+        const audio = new Audio(data.URL);
+        audio.onended = () => setIsSamplePlaying(false);
+        audio.play();
+        setSampleAudio(audio);
+      } else {
+        throw new Error("Sample generation failed");
+      }
+    } catch {
+      setIsSamplePlaying(false);
+    }
+  };
 
   return (
     <motion.div
@@ -167,17 +205,19 @@ export function VoiceSettings({
       </div>
 
       <div className="space-y-4">
-        {/* Provider Toggle */}
-        <div className="flex items-center justify-between">
-          <Label htmlFor="elevenlabs-toggle" className="text-xs text-muted-foreground">
-            Use ElevenLabs
-          </Label>
-          <Switch 
-            id="elevenlabs-toggle" 
-            checked={useElevenLabs}
-            onCheckedChange={(checked) => onProviderChange(checked ? 'elevenlabs' : 'ttsmp3')}
-          />
-        </div>
+        {/* Provider Toggle - only show if ElevenLabs enabled by admin */}
+        {elevenlabsEnabled && (
+          <div className="flex items-center justify-between">
+            <Label htmlFor="elevenlabs-toggle" className="text-xs text-muted-foreground">
+              Use ElevenLabs
+            </Label>
+            <Switch 
+              id="elevenlabs-toggle" 
+              checked={useElevenLabs}
+              onCheckedChange={(checked) => onProviderChange(checked ? 'elevenlabs' : 'ttsmp3')}
+            />
+          </div>
+        )}
 
         {useElevenLabs ? (
           /* ElevenLabs voice selector */
@@ -255,6 +295,20 @@ export function VoiceSettings({
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={handlePlaySample}
+              disabled={isSamplePlaying}
+            >
+              {isSamplePlaying ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <Play className="w-3 h-3 mr-1" />
+              )}
+              {isSamplePlaying ? "Playing..." : "Play Sample"}
+            </Button>
             <p className="text-[10px] text-muted-foreground">Free TTS via ttsmp3.com — no API key needed</p>
           </div>
         )}

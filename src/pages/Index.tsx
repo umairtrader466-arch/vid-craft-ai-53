@@ -11,10 +11,14 @@ import { processVideoTopic } from "@/lib/videoProcessing";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import type { VideoTopic, PipelineStep } from "@/types/video";
 
 const Index = () => {
   const { user } = useAuth();
+  const { settings, userLimits, canCreateVideo, videosRemaining, loading: settingsLoading } = useAppSettings();
   const [topics, setTopics] = useState<VideoTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<string>('george');
@@ -131,6 +135,15 @@ const Index = () => {
   }, []);
 
   const handleProcess = useCallback(async (id: string) => {
+    if (!canCreateVideo) {
+      toast({
+        title: "Monthly limit reached",
+        description: `You've used all ${userLimits.monthlyVideoLimit} videos this month.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const topic = topics.find(t => t.id === id);
     if (!topic) return;
 
@@ -141,8 +154,11 @@ const Index = () => {
       )
     );
 
-    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice);
-  }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice]);
+    // Force TTSMP3 if ElevenLabs is disabled by admin
+    const effectiveProvider = settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3';
+
+    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, effectiveProvider, selectedTtsmp3Voice);
+  }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice, canCreateVideo, userLimits, settings]);
 
   const handleProcessAll = useCallback(async () => {
     const pendingTopics = topics.filter(t => t.status === 'pending');
@@ -190,6 +206,21 @@ const Index = () => {
         <Header />
         
         <main className="pb-12 space-y-6">
+          {!canCreateVideo && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You've reached your monthly limit of {userLimits.monthlyVideoLimit} videos. Contact admin for more.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {canCreateVideo && (
+            <div className="text-xs text-muted-foreground text-right">
+              {videosRemaining} of {userLimits.monthlyVideoLimit} videos remaining this month
+            </div>
+          )}
+
           <PipelineProgress steps={pipelineSteps} />
           
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -200,10 +231,11 @@ const Index = () => {
             <VoiceSettings 
                 selectedVoice={selectedVoice} 
                 onVoiceChange={setSelectedVoice}
-                voiceProvider={voiceProvider}
+                voiceProvider={settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3'}
                 onProviderChange={setVoiceProvider}
                 selectedTtsmp3Voice={selectedTtsmp3Voice}
                 onTtsmp3VoiceChange={setSelectedTtsmp3Voice}
+                elevenlabsEnabled={settings.elevenlabsEnabled}
               />
             </div>
             <div className="lg:col-span-1">
@@ -224,6 +256,7 @@ const Index = () => {
             onProcessAll={handleProcessAll}
             onUploadComplete={handleUploadComplete}
             privacyStatus={youtubePrivacy}
+            canCreateVideo={canCreateVideo}
           />
         </main>
       </div>
