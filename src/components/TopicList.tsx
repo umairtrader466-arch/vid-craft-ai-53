@@ -11,9 +11,10 @@ interface TopicListProps {
   onProcessAll: () => void;
   onUploadComplete: (id: string, youtubeUrl: string) => void;
   privacyStatus: 'public' | 'unlisted';
+  canCreateVideo?: boolean;
 }
 
-export function TopicList({ topics, onProcess, onRegenerate, onProcessAll, onUploadComplete, privacyStatus }: TopicListProps) {
+export function TopicList({ topics, onProcess, onRegenerate, onProcessAll, onUploadComplete, privacyStatus, canCreateVideo = true }: TopicListProps) {
   const pendingCount = topics.filter(t => t.status === 'pending').length;
   const completedCount = topics.filter(t => t.status === 'uploaded' || t.status === 'video_complete').length;
 
@@ -52,7 +53,7 @@ export function TopicList({ topics, onProcess, onRegenerate, onProcessAll, onUpl
           </p>
         </div>
         
-        {pendingCount > 0 && (
+        {pendingCount > 0 && canCreateVideo && (
           <Button onClick={onProcessAll} className="bg-gradient-primary hover:opacity-90">
             <Sparkles className="w-4 h-4 mr-2" />
             Process All ({pendingCount})

@@ -1,8 +1,14 @@
 import { motion } from "framer-motion";
-import { Video, Sparkles } from "lucide-react";
+import { Video, Sparkles, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { UserMenu } from "./UserMenu";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 export function Header() {
+  const navigate = useNavigate();
+  const { isAdmin } = useAdminRole();
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -30,6 +36,12 @@ export function Header() {
       </div>
       
       <div className="flex items-center gap-4">
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
+            <Shield className="w-3 h-3 mr-1" />
+            Admin
+          </Button>
+        )}
         <div className="text-right hidden sm:block">
           <p className="text-sm text-muted-foreground">Ready to create</p>
           <p className="text-xs text-primary">Upload CSV to start</p>
