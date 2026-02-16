@@ -18,6 +18,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
   ArrowLeft,
   Users,
   Settings,
@@ -25,6 +42,10 @@ import {
   Shield,
   Loader2,
   Save,
+  Trash2,
+  Ban,
+  CheckCircle,
+  BarChart3,
 } from "lucide-react";
 
 interface UserRow {
@@ -34,8 +55,21 @@ interface UserRow {
   role: string;
   monthlyLimit: number;
   monthlyCount: number;
+  isBanned: boolean;
   createdAt: string;
 }
+
+interface DailyStat {
+  date: string;
+  count: number;
+}
+
+const chartConfig = {
+  count: {
+    label: "Videos",
+    color: "hsl(var(--primary))",
+  },
+};
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -47,20 +81,25 @@ export default function Admin() {
   const [defaultLimit, setDefaultLimit] = useState(10);
   const [savingSettings, setSavingSettings] = useState(false);
   const [editingLimits, setEditingLimits] = useState<Record<string, number>>({});
+  const [videoStats, setVideoStats] = useState<DailyStat[]>([]);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
 
     try {
-      // Fetch all users via edge function (admin-only)
-      const { data: usersData, error: usersError } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'list-users' },
-      });
+      const [usersRes, statsRes] = await Promise.all([
+        supabase.functions.invoke('admin-users', { body: { action: 'list-users' } }),
+        supabase.functions.invoke('admin-users', { body: { action: 'get-video-stats' } }),
+      ]);
 
-      if (usersError) throw usersError;
-      setUsers(usersData?.users || []);
+      if (usersRes.error) throw usersRes.error;
+      setUsers(usersRes.data?.users || []);
 
-      // Fetch settings
+      if (!statsRes.error && statsRes.data?.stats) {
+        setVideoStats(statsRes.data.stats);
+      }
+
       const { data: settingsData } = await supabase
         .from('app_settings')
         .select('key, value');
@@ -137,6 +176,41 @@ export default function Admin() {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    setActionLoading(userId);
+    try {
+      const { error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'delete-user', userId },
+      });
+      if (error) throw error;
+      setUsers(prev => prev.filter(u => u.userId !== userId));
+      toast({ title: "User deleted" });
+    } catch (err) {
+      toast({ title: "Failed to delete user", description: err instanceof Error ? err.message : '', variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleToggleBan = async (userId: string, currentlyBanned: boolean) => {
+    setActionLoading(userId);
+    try {
+      const action = currentlyBanned ? 'unban-user' : 'ban-user';
+      const { error } = await supabase.functions.invoke('admin-users', {
+        body: { action, userId },
+      });
+      if (error) throw error;
+      setUsers(prev => prev.map(u =>
+        u.userId === userId ? { ...u, isBanned: !currentlyBanned } : u
+      ));
+      toast({ title: currentlyBanned ? "User unbanned" : "User banned" });
+    } catch (err) {
+      toast({ title: "Failed to update ban status", description: err instanceof Error ? err.message : '', variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (roleLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -208,6 +282,39 @@ export default function Admin() {
           </Card>
         </div>
 
+        {/* Video Production Chart */}
+        <Card className="glass mb-8">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Daily Video Production (Last 30 Days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[250px] w-full">
+              <BarChart data={videoStats}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(val) => {
+                    const d = new Date(val);
+                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                  }}
+                  className="text-muted-foreground"
+                  fontSize={11}
+                  interval="preserveStartEnd"
+                />
+                <YAxis allowDecimals={false} className="text-muted-foreground" fontSize={11} />
+                <ChartTooltip
+                  content={<ChartTooltipContent />}
+                  labelFormatter={(val) => new Date(val).toLocaleDateString()}
+                />
+                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
         {/* Global Settings */}
         <Card className="glass mb-8">
           <CardHeader>
@@ -273,15 +380,16 @@ export default function Admin() {
                     <TableHead>Email</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead className="text-center">Videos This Month</TableHead>
-                    <TableHead className="text-center">Monthly Limit</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Videos</TableHead>
+                    <TableHead className="text-center">Limit</TableHead>
                     <TableHead>Joined</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((u) => (
-                    <TableRow key={u.userId}>
+                    <TableRow key={u.userId} className={u.isBanned ? 'opacity-60' : ''}>
                       <TableCell className="text-sm">{u.email}</TableCell>
                       <TableCell className="text-sm">{u.displayName || '—'}</TableCell>
                       <TableCell>
@@ -293,35 +401,83 @@ export default function Admin() {
                           {u.role}
                         </span>
                       </TableCell>
+                      <TableCell>
+                        {u.isBanned ? (
+                          <span className="text-xs px-2 py-1 rounded-full bg-destructive/20 text-destructive">Banned</span>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded-full bg-success/20 text-success">Active</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className={u.monthlyCount >= u.monthlyLimit ? 'text-destructive font-bold' : ''}>
                           {u.monthlyCount}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={editingLimits[u.userId] ?? u.monthlyLimit}
-                          onChange={(e) => setEditingLimits(prev => ({
-                            ...prev,
-                            [u.userId]: parseInt(e.target.value) || 0,
-                          }))}
-                          className="w-20 mx-auto text-center"
-                        />
+                        <div className="flex items-center gap-1 justify-center">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={editingLimits[u.userId] ?? u.monthlyLimit}
+                            onChange={(e) => setEditingLimits(prev => ({
+                              ...prev,
+                              [u.userId]: parseInt(e.target.value) || 0,
+                            }))}
+                            className="w-20 text-center"
+                          />
+                          {editingLimits[u.userId] !== undefined && editingLimits[u.userId] !== u.monthlyLimit && (
+                            <Button size="sm" variant="outline" onClick={() => handleUpdateUserLimit(u.userId)}>
+                              <Save className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(u.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        {editingLimits[u.userId] !== undefined && editingLimits[u.userId] !== u.monthlyLimit && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleUpdateUserLimit(u.userId)}
-                          >
-                            <Save className="w-3 h-3" />
-                          </Button>
+                        {u.role !== 'admin' && (
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button
+                              size="sm"
+                              variant={u.isBanned ? "outline" : "ghost"}
+                              onClick={() => handleToggleBan(u.userId, u.isBanned)}
+                              disabled={actionLoading === u.userId}
+                              title={u.isBanned ? "Unban user" : "Ban user"}
+                            >
+                              {u.isBanned ? <CheckCircle className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  disabled={actionLoading === u.userId}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to permanently delete <strong>{u.email}</strong>? This will remove all their data and cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteUser(u.userId)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>

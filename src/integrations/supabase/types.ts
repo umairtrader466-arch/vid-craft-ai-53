@@ -68,6 +68,7 @@ export type Database = {
       user_limits: {
         Row: {
           id: string
+          is_banned: boolean
           monthly_video_limit: number
           updated_at: string
           updated_by: string | null
@@ -75,6 +76,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          is_banned?: boolean
           monthly_video_limit?: number
           updated_at?: string
           updated_by?: string | null
@@ -82,6 +84,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          is_banned?: boolean
           monthly_video_limit?: number
           updated_at?: string
           updated_by?: string | null
