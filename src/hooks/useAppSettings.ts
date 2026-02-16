@@ -10,6 +10,7 @@ interface AppSettings {
 interface UserLimits {
   monthlyVideoLimit: number;
   monthlyVideoCount: number;
+  isBanned: boolean;
 }
 
 export function useAppSettings() {
@@ -21,6 +22,7 @@ export function useAppSettings() {
   const [userLimits, setUserLimits] = useState<UserLimits>({
     monthlyVideoLimit: 10,
     monthlyVideoCount: 0,
+    isBanned: false,
   });
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +50,7 @@ export function useAppSettings() {
       // Fetch user limits
       const { data: limitsData } = await supabase
         .from('user_limits')
-        .select('monthly_video_limit')
+        .select('monthly_video_limit, is_banned')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -60,6 +62,7 @@ export function useAppSettings() {
       setUserLimits({
         monthlyVideoLimit: limitsData?.monthly_video_limit ?? 10,
         monthlyVideoCount: (countData as number) ?? 0,
+        isBanned: limitsData?.is_banned ?? false,
       });
 
       setLoading(false);
@@ -68,7 +71,7 @@ export function useAppSettings() {
     fetchSettings();
   }, [user]);
 
-  const canCreateVideo = userLimits.monthlyVideoCount < userLimits.monthlyVideoLimit;
+  const canCreateVideo = !userLimits.isBanned && userLimits.monthlyVideoCount < userLimits.monthlyVideoLimit;
   const videosRemaining = userLimits.monthlyVideoLimit - userLimits.monthlyVideoCount;
 
   return { settings, userLimits, canCreateVideo, videosRemaining, loading };

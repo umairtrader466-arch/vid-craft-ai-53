@@ -187,11 +187,16 @@ const Index = () => {
     await handleProcess(id);
   }, [updateTopic, handleProcess]);
 
-  const handleUploadComplete = useCallback((id: string, youtubeUrl: string) => {
+  const handleUploadComplete = useCallback(async (id: string, youtubeUrl: string) => {
     updateTopic(id, { 
       status: 'uploaded', 
       youtubeUrl 
     });
+    // Save to database
+    await supabase
+      .from('video_topics')
+      .update({ youtube_url: youtubeUrl, status: 'uploaded' })
+      .eq('id', id);
   }, [updateTopic]);
 
   return (
@@ -206,7 +211,16 @@ const Index = () => {
         <Header />
         
         <main className="pb-12 space-y-6">
-          {!canCreateVideo && (
+          {userLimits.isBanned && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your account has been suspended. Contact admin for assistance.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!userLimits.isBanned && !canCreateVideo && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
