@@ -168,25 +168,38 @@ export function VoiceSettings({
 
     setIsSamplePlaying(true);
     try {
-      const response = await fetch("https://ttsmp3.com/makemp3_new.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          msg: "Hello! This is a sample of my voice. How does it sound?",
+      // Use edge function to generate sample via TTSMP3
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase.functions.invoke('generate-voice-ttsmp3', {
+        body: {
+          script: "Hello! This is a sample of my voice. How does it sound?",
           lang: selectedTtsmp3Voice,
-          source: "ttsmp3",
-        }),
+        },
       });
-      const data = await response.json();
-      if (data.Error === 0 && data.URL) {
-        const audio = new Audio(data.URL);
+
+      if (error) throw error;
+
+      if (data?.audioBase64) {
+        const audioBlob = Uint8Array.from(atob(data.audioBase64), c => c.charCodeAt(0));
+        const blob = new Blob([audioBlob], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => {
+          setIsSamplePlaying(false);
+          URL.revokeObjectURL(url);
+        };
+        audio.play();
+        setSampleAudio(audio);
+      } else if (data?.mp3Url) {
+        const audio = new Audio(data.mp3Url);
         audio.onended = () => setIsSamplePlaying(false);
         audio.play();
         setSampleAudio(audio);
       } else {
         throw new Error("Sample generation failed");
       }
-    } catch {
+    } catch (err) {
+      console.error("Sample playback error:", err);
       setIsSamplePlaying(false);
     }
   };
