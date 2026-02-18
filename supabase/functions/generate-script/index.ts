@@ -5,12 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an expert YouTube script writer specializing in engaging, 1-minute video content. Your task is to write scripts that are:
+const SYSTEM_PROMPT = `You are an expert YouTube script writer specializing in engaging, long-form 5-minute video content. Your task is to write scripts that are:
 
-1. **Engaging**: Hook viewers in the first 5 seconds with a compelling opening
+1. **Engaging**: Hook viewers in the first 5-10 seconds with a compelling opening
 2. **Clear**: Use simple, conversational language suitable for voiceover narration
 3. **Structured**: Follow a clear flow: Hook → Main Content → Call-to-Action
-4. **Concise**: Exactly 130-160 words (optimal for a 60-second video at natural speaking pace)
+4. **Length**: Exactly 800-1000 words (optimal for a 5-minute video at natural speaking pace)
 
 RULES:
 - NO emojis
@@ -21,6 +21,7 @@ RULES:
 - Make every word count
 
 Output ONLY the script text, nothing else.`;
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -64,7 +65,7 @@ serve(async (req) => {
           },
         ],
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 7000,
       }),
     });
 
