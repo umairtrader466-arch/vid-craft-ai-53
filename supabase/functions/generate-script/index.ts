@@ -10,7 +10,7 @@ const SYSTEM_PROMPT = `You are an expert YouTube script writer specializing in e
 1. **Engaging**: Hook viewers in the first 5-10 seconds with a compelling opening
 2. **Clear**: Use simple, conversational language suitable for voiceover narration
 3. **Structured**: Follow a clear flow: Hook → Main Content → Call-to-Action
-4. **Length**: Exactly 800-1000 words (optimal for a 5-minute video at natural speaking pace)
+4. **Length**: Exactly 1300-1600 words (optimal for a 5-minute video at natural speaking pace)
 
 RULES:
 - NO emojis
