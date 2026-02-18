@@ -60,7 +60,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           { 
             role: "user", 
-            content: `Write an engaging 1-minute YouTube script about: "${topic}"\n\nRemember: 130-160 words, no emojis, no stage directions, conversational tone.` 
+            content: `Write an engaging 5-minute YouTube script about: "${topic}"\n\nRemember: 1300-1600 words, no emojis, no stage directions, conversational tone.` 
           },
         ],
         temperature: 0.8,
