@@ -137,7 +137,7 @@ export function ScheduleDialog({
           </div>
 
           {/* Start time */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="startTime" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Start time
@@ -149,7 +149,30 @@ export function ScheduleDialog({
               onChange={(e) => setStartTime(e.target.value)}
               className="w-full"
             />
-          </div>
+          </div> */}
+
+              <div className="space-y-2">
+                <Label htmlFor="startTime" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Start time
+                </Label>
+                <select
+                  id="startTime"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  {Array.from({ length: 24 }, (_, i) => {
+                    const hour = i.toString().padStart(2, "0");
+                    const label = i === 0 ? "12 AM (Midnight)" : i < 12 ? `${i} AM` : i === 12 ? "12 PM (Noon)" : `${i - 12} PM`;
+                    return (
+                      <option key={hour} value={`${hour}:00`}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
           {/* Hours between videos */}
           {videosPerDay > 1 && (
