@@ -10,7 +10,7 @@ const SYSTEM_PROMPT = `You are an expert YouTube script writer specializing in e
 1. **Engaging**: Hook viewers in the first 5-10 seconds with a compelling opening
 2. **Clear**: Use simple, conversational language suitable for voiceover narration
 3. **Structured**: Follow a clear flow: Hook → Main Content → Call-to-Action
-4. **Length**: Exactly 1300-1600 words (optimal for a 5-minute video at natural speaking pace)
+4. **Length**: Exactly 700-800 words (optimal for a 5-minute video at natural speaking pace)
 
 RULES:
 - NO emojis
@@ -61,11 +61,11 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           { 
             role: "user", 
-            content: `Write an engaging 5-minute YouTube script about: "${topic}"\n\nRemember: 1300-1600 words, no emojis, no stage directions, conversational tone.` 
+            content: `Write an engaging exact 5-minute YouTube script about: "${topic}"\n\nRemember: 700-800 words, no emojis, no stage directions, conversational tone.` 
           },
         ],
         temperature: 0.8,
-        max_tokens: 7000,
+        max_tokens: 3000,
       }),
     });
 
