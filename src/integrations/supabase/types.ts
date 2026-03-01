@@ -119,6 +119,7 @@ export type Database = {
           id: string
           scheduled_at: string | null
           script: string | null
+          script_duration_minutes: number | null
           status: string
           topic: string
           updated_at: string
@@ -133,6 +134,7 @@ export type Database = {
           id?: string
           scheduled_at?: string | null
           script?: string | null
+          script_duration_minutes?: number | null
           status?: string
           topic: string
           updated_at?: string
@@ -147,6 +149,7 @@ export type Database = {
           id?: string
           scheduled_at?: string | null
           script?: string | null
+          script_duration_minutes?: number | null
           status?: string
           topic?: string
           updated_at?: string
@@ -155,6 +158,33 @@ export type Database = {
           visuals?: Json | null
           voice_url?: string | null
           youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      youtube_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
