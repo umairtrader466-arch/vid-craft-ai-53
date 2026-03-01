@@ -24,11 +24,11 @@ const Index = () => {
   const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'ttsmp3'>('elevenlabs');
   const [selectedTtsmp3Voice, setSelectedTtsmp3Voice] = useState<string>('Kimberly');
   const [youtubePrivacy, setYoutubePrivacy] = useState<'public' | 'unlisted'>('unlisted');
+  const [videoDuration, setVideoDuration] = useState<number>(300);
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>(
     PIPELINE_STEPS.map(step => ({ ...step, status: 'pending' as const }))
   );
 
-  // Load topics from database on mount
   useEffect(() => {
     const loadTopics = async () => {
       if (!user) return;
@@ -50,15 +50,12 @@ const Index = () => {
           youtubeUrl: row.youtube_url || undefined,
           createdAt: new Date(row.created_at),
           scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
+          durationSeconds: row.script_duration_minutes ? row.script_duration_minutes * 60 : undefined,
         }));
 
         setTopics(loadedTopics);
         if (loadedTopics.length > 0) {
-          setPipelineSteps(prev =>
-            prev.map(step =>
-              step.id === 'csv' ? { ...step, status: 'completed' } : step
-            )
-          );
+          setPipelineSteps(prev => prev.map(step => step.id === 'csv' ? { ...step, status: 'completed' } : step));
         }
       } catch (err) {
         console.error('Error loading topics:', err);
@@ -110,10 +107,15 @@ const Index = () => {
     }
     const topic = topics.find(t => t.id === id);
     if (!topic) return;
+
+    // Save duration to DB
+    const durationMinutes = Math.round(videoDuration / 60);
+    await supabase.from('video_topics').update({ script_duration_minutes: durationMinutes }).eq('id', id);
+
     setPipelineSteps(prev => prev.map(step => step.id === 'script' ? { ...step, status: 'processing' } : step));
     const effectiveProvider = settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3';
-    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, effectiveProvider, selectedTtsmp3Voice);
-  }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice, canCreateVideo, userLimits, settings]);
+    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, effectiveProvider, selectedTtsmp3Voice, videoDuration);
+  }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice, canCreateVideo, userLimits, settings, videoDuration]);
 
   const handleProcessAll = useCallback(async () => {
     const pendingTopics = topics.filter(t => t.status === 'pending');
@@ -148,24 +150,19 @@ const Index = () => {
           <Tabs defaultValue="create" className="space-y-6">
             <TabsList className="w-full justify-start bg-secondary/50 border border-border/50 p-1 h-auto flex-wrap">
               <TabsTrigger value="create" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Video className="w-4 h-4" />
-                <span className="hidden sm:inline">Create Video</span>
+                <Video className="w-4 h-4" /><span className="hidden sm:inline">Create Video</span>
               </TabsTrigger>
               <TabsTrigger value="videos" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Film className="w-4 h-4" />
-                <span className="hidden sm:inline">My Videos</span>
+                <Film className="w-4 h-4" /><span className="hidden sm:inline">My Videos</span>
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Clock className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
+                <Clock className="w-4 h-4" /><span className="hidden sm:inline">History</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
+                <Settings className="w-4 h-4" /><span className="hidden sm:inline">Settings</span>
               </TabsTrigger>
               <TabsTrigger value="profile" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Profile</span>
+                <User className="w-4 h-4" /><span className="hidden sm:inline">Profile</span>
               </TabsTrigger>
             </TabsList>
 
@@ -178,6 +175,10 @@ const Index = () => {
                 monthlyVideoLimit={userLimits.monthlyVideoLimit}
                 isBanned={userLimits.isBanned}
                 youtubePrivacy={youtubePrivacy}
+                videoDuration={videoDuration}
+                onDurationChange={setVideoDuration}
+                minDuration={settings.minVideoDurationSeconds}
+                maxDuration={settings.maxVideoDurationSeconds}
                 onTopicsLoaded={handleTopicsLoaded}
                 onProcess={handleProcess}
                 onRegenerate={handleRegenerate}
@@ -186,14 +187,8 @@ const Index = () => {
               />
             </TabsContent>
 
-            <TabsContent value="videos">
-              <MyVideosTab />
-            </TabsContent>
-
-            <TabsContent value="history">
-              <HistoryTab />
-            </TabsContent>
-
+            <TabsContent value="videos"><MyVideosTab /></TabsContent>
+            <TabsContent value="history"><HistoryTab /></TabsContent>
             <TabsContent value="settings">
               <SettingsTab
                 selectedVoice={selectedVoice}
@@ -206,10 +201,7 @@ const Index = () => {
                 onPrivacyChange={setYoutubePrivacy}
               />
             </TabsContent>
-
-            <TabsContent value="profile">
-              <ProfileTab />
-            </TabsContent>
+            <TabsContent value="profile"><ProfileTab /></TabsContent>
           </Tabs>
         </main>
       </div>

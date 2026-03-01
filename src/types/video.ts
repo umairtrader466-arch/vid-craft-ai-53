@@ -27,6 +27,7 @@ export interface VideoTopic {
   error?: string;
   createdAt: Date;
   scheduledAt?: Date;
+  durationSeconds?: number;
 }
 
 export interface VisualAsset {

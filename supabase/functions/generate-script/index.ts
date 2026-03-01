@@ -5,23 +5,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an expert YouTube script writer specializing in engaging, long-form 5-minute video content. Your task is to write scripts that are:
+function getWordCountForDuration(durationSeconds: number): { min: number; max: number } {
+  // Average speaking pace: ~150 words per minute
+  const wordsPerSecond = 2.5;
+  const targetWords = Math.round(durationSeconds * wordsPerSecond);
+  const margin = Math.max(20, Math.round(targetWords * 0.1));
+  return { min: targetWords - margin, max: targetWords + margin };
+}
 
-1. **Engaging**: Hook viewers in the first 5-10 seconds with a compelling opening
+function getSystemPrompt(durationSeconds: number): string {
+  const { min, max } = getWordCountForDuration(durationSeconds);
+  const durationLabel = durationSeconds <= 60 
+    ? `${durationSeconds}-second YouTube Short`
+    : `${Math.round(durationSeconds / 60)}-minute YouTube video`;
+
+  const isShort = durationSeconds <= 60;
+
+  return `You are an expert YouTube script writer specializing in engaging ${isShort ? 'short-form' : 'long-form'} video content. Your task is to write scripts that are:
+
+1. **Engaging**: Hook viewers in the first ${isShort ? '2-3' : '5-10'} seconds with a compelling opening
 2. **Clear**: Use simple, conversational language suitable for voiceover narration
-3. **Structured**: Follow a clear flow: Hook → Main Content → Call-to-Action
-4. **Length**: Exactly 700-800 words (optimal for a 5-minute video at natural speaking pace)
+3. **Structured**: ${isShort ? 'Get straight to the point with maximum impact' : 'Follow a clear flow: Hook → Main Content → Call-to-Action'}
+4. **Length**: Exactly ${min}-${max} words (optimal for a ${durationLabel} at natural speaking pace)
 
 RULES:
 - NO emojis
 - NO stage directions (like [pause], [cut to], etc.)
 - NO markdown formatting
 - Write in a natural, conversational tone
-- End with a clear call-to-action (subscribe, like, comment, etc.)
+${isShort ? '- Keep it punchy and fast-paced for Shorts format' : '- End with a clear call-to-action (subscribe, like, comment, etc.)'}
 - Make every word count
 
 Output ONLY the script text, nothing else.`;
-
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -29,7 +45,7 @@ serve(async (req) => {
   }
 
   try {
-    const { topic } = await req.json();
+    const { topic, durationSeconds = 300 } = await req.json();
     
     if (!topic || typeof topic !== "string") {
       return new Response(
@@ -40,14 +56,17 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Generating script for topic:", topic);
+    const { min, max } = getWordCountForDuration(durationSeconds);
+    const isShort = durationSeconds <= 60;
+    const durationLabel = isShort ? `${durationSeconds}-second Short` : `${Math.round(durationSeconds / 60)}-minute video`;
+
+    console.log(`Generating script for topic: "${topic}", duration: ${durationSeconds}s (${min}-${max} words)`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -58,33 +77,30 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: getSystemPrompt(durationSeconds) },
           { 
             role: "user", 
-            content: `Write an engaging exact 5-minute YouTube script about: "${topic}"\n\nRemember: 700-800 words, no emojis, no stage directions, conversational tone.` 
+            content: `Write an engaging exact ${durationLabel} YouTube script about: "${topic}"\n\nRemember: ${min}-${max} words, no emojis, no stage directions, conversational tone.` 
           },
         ],
         temperature: 0.8,
-        max_tokens: 3000,
+        max_tokens: Math.max(1000, Math.round(max * 3)),
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        console.error("Rate limit exceeded");
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
-        console.error("Payment required");
         return new Response(
           JSON.stringify({ error: "AI credits exhausted. Please add funds to continue." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
       return new Response(
@@ -97,23 +113,17 @@ serve(async (req) => {
     const script = data.choices?.[0]?.message?.content?.trim();
 
     if (!script) {
-      console.error("No script content in response:", data);
       return new Response(
         JSON.stringify({ error: "No script generated. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Count words
     const wordCount = script.split(/\s+/).filter(Boolean).length;
-    console.log("Generated script with", wordCount, "words");
+    console.log("Generated script with", wordCount, "words for", durationLabel);
 
     return new Response(
-      JSON.stringify({ 
-        script, 
-        wordCount,
-        topic 
-      }),
+      JSON.stringify({ script, wordCount, topic, durationSeconds }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

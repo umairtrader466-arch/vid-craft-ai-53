@@ -79,6 +79,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [elevenlabsEnabled, setElevenlabsEnabled] = useState(true);
   const [defaultLimit, setDefaultLimit] = useState(10);
+  const [minDuration, setMinDuration] = useState(30);
+  const [maxDuration, setMaxDuration] = useState(1200);
   const [savingSettings, setSavingSettings] = useState(false);
   const [editingLimits, setEditingLimits] = useState<Record<string, number>>({});
   const [videoStats, setVideoStats] = useState<DailyStat[]>([]);
@@ -109,6 +111,8 @@ export default function Admin() {
           const val = typeof s.value === 'string' ? s.value : JSON.stringify(s.value);
           if (s.key === 'elevenlabs_enabled') setElevenlabsEnabled(val === 'true');
           if (s.key === 'default_monthly_video_limit') setDefaultLimit(parseInt(val) || 10);
+          if (s.key === 'min_video_duration_seconds') setMinDuration(parseInt(val) || 30);
+          if (s.key === 'max_video_duration_seconds') setMaxDuration(parseInt(val) || 1200);
         });
       }
     } catch (err) {
@@ -132,15 +136,20 @@ export default function Admin() {
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      await supabase
-        .from('app_settings')
-        .update({ value: JSON.stringify(elevenlabsEnabled), updated_at: new Date().toISOString(), updated_by: user?.id })
-        .eq('key', 'elevenlabs_enabled');
+      const now = new Date().toISOString();
+      const updates = [
+        { key: 'elevenlabs_enabled', value: JSON.stringify(elevenlabsEnabled) },
+        { key: 'default_monthly_video_limit', value: JSON.stringify(defaultLimit) },
+        { key: 'min_video_duration_seconds', value: JSON.stringify(minDuration) },
+        { key: 'max_video_duration_seconds', value: JSON.stringify(maxDuration) },
+      ];
 
-      await supabase
-        .from('app_settings')
-        .update({ value: JSON.stringify(defaultLimit), updated_at: new Date().toISOString(), updated_by: user?.id })
-        .eq('key', 'default_monthly_video_limit');
+      for (const u of updates) {
+        await supabase
+          .from('app_settings')
+          .update({ value: u.value, updated_at: now, updated_by: user?.id })
+          .eq('key', u.key);
+      }
 
       toast({ title: "Settings saved!" });
     } catch {
@@ -349,6 +358,40 @@ export default function Admin() {
                 min={1}
                 value={defaultLimit}
                 onChange={(e) => setDefaultLimit(parseInt(e.target.value) || 1)}
+                className="w-24"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm">Min Video Duration (seconds)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Minimum duration users can select (≤60s = Shorts)
+                </p>
+              </div>
+              <Input
+                type="number"
+                min={15}
+                max={maxDuration}
+                value={minDuration}
+                onChange={(e) => setMinDuration(parseInt(e.target.value) || 30)}
+                className="w-24"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm">Max Video Duration (seconds)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Maximum duration users can select (1200 = 20 minutes)
+                </p>
+              </div>
+              <Input
+                type="number"
+                min={minDuration}
+                max={1200}
+                value={maxDuration}
+                onChange={(e) => setMaxDuration(parseInt(e.target.value) || 1200)}
                 className="w-24"
               />
             </div>

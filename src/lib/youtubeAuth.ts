@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const STORAGE_KEY = 'youtube_oauth_tokens';
 const REDIRECT_URI = `${window.location.origin}/youtube-callback`;
 
 interface YouTubeTokens {
@@ -9,56 +8,81 @@ interface YouTubeTokens {
   expiresAt: number;
 }
 
-export function getStoredTokens(): YouTubeTokens | null {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return null;
-  
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
+// Cache tokens in memory for the session
+let cachedTokens: YouTubeTokens | null = null;
+
+export async function getStoredTokens(): Promise<YouTubeTokens | null> {
+  if (cachedTokens) return cachedTokens;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('youtube_tokens')
+    .select('access_token, refresh_token, expires_at')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  cachedTokens = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: new Date(data.expires_at).getTime(),
+  };
+
+  return cachedTokens;
+}
+
+export async function storeTokens(tokens: YouTubeTokens): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const expiresAt = new Date(tokens.expiresAt).toISOString();
+
+  const { error } = await supabase
+    .from('youtube_tokens')
+    .upsert({
+      user_id: user.id,
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      expires_at: expiresAt,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+  if (error) throw new Error('Failed to save YouTube tokens');
+  cachedTokens = tokens;
+}
+
+export async function clearTokens(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await supabase.from('youtube_tokens').delete().eq('user_id', user.id);
   }
+  cachedTokens = null;
 }
 
-export function storeTokens(tokens: YouTubeTokens): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
-}
-
-export function clearTokens(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-export function isTokenExpired(): boolean {
-  const tokens = getStoredTokens();
+export async function isTokenExpired(): Promise<boolean> {
+  const tokens = await getStoredTokens();
   if (!tokens) return true;
-  
-  // Consider expired if less than 5 minutes remaining
   return Date.now() > tokens.expiresAt - 5 * 60 * 1000;
 }
 
 export async function initiateYouTubeAuth(): Promise<void> {
   const { data, error } = await supabase.functions.invoke<{ authUrl: string }>('youtube-auth', {
-    body: { 
-      action: 'get-auth-url',
-      redirectUri: REDIRECT_URI,
-    },
+    body: { action: 'get-auth-url', redirectUri: REDIRECT_URI },
   });
 
   if (error || !data?.authUrl) {
     throw new Error(error?.message || 'Failed to get YouTube auth URL');
   }
 
-  // Open OAuth popup
   const width = 600;
   const height = 700;
   const left = window.screenX + (window.outerWidth - width) / 2;
   const top = window.screenY + (window.outerHeight - height) / 2;
-  
-  window.open(
-    data.authUrl,
-    'youtube-auth',
-    `width=${width},height=${height},left=${left},top=${top},popup=1`
-  );
+
+  window.open(data.authUrl, 'youtube-auth', `width=${width},height=${height},left=${left},top=${top},popup=1`);
 }
 
 export async function exchangeCodeForTokens(code: string): Promise<YouTubeTokens> {
@@ -67,11 +91,7 @@ export async function exchangeCodeForTokens(code: string): Promise<YouTubeTokens
     refreshToken: string;
     expiresIn: number;
   }>('youtube-auth', {
-    body: { 
-      action: 'exchange-code',
-      code,
-      redirectUri: REDIRECT_URI,
-    },
+    body: { action: 'exchange-code', code, redirectUri: REDIRECT_URI },
   });
 
   if (error || !data) {
@@ -84,12 +104,12 @@ export async function exchangeCodeForTokens(code: string): Promise<YouTubeTokens
     expiresAt: Date.now() + data.expiresIn * 1000,
   };
 
-  storeTokens(tokens);
+  await storeTokens(tokens);
   return tokens;
 }
 
 export async function refreshAccessToken(): Promise<string> {
-  const tokens = getStoredTokens();
+  const tokens = await getStoredTokens();
   if (!tokens?.refreshToken) {
     throw new Error('No refresh token available');
   }
@@ -98,14 +118,11 @@ export async function refreshAccessToken(): Promise<string> {
     accessToken: string;
     expiresIn: number;
   }>('youtube-auth', {
-    body: { 
-      action: 'refresh-token',
-      refreshToken: tokens.refreshToken,
-    },
+    body: { action: 'refresh-token', refreshToken: tokens.refreshToken },
   });
 
   if (error || !data) {
-    clearTokens();
+    await clearTokens();
     throw new Error('Failed to refresh token - please re-authenticate');
   }
 
@@ -115,18 +132,15 @@ export async function refreshAccessToken(): Promise<string> {
     expiresAt: Date.now() + data.expiresIn * 1000,
   };
 
-  storeTokens(updatedTokens);
+  await storeTokens(updatedTokens);
   return data.accessToken;
 }
 
 export async function getValidAccessToken(): Promise<string> {
-  const tokens = getStoredTokens();
-  
-  if (!tokens) {
-    throw new Error('Not authenticated with YouTube');
-  }
+  const tokens = await getStoredTokens();
+  if (!tokens) throw new Error('Not authenticated with YouTube');
 
-  if (isTokenExpired()) {
+  if (await isTokenExpired()) {
     return await refreshAccessToken();
   }
 
@@ -145,8 +159,6 @@ export async function uploadToYouTube(
     success: boolean;
     videoId: string;
     youtubeUrl: string;
-    title: string;
-    privacyStatus: string;
   }>('youtube-upload', {
     body: { videoUrl, topic, script, accessToken, privacyStatus },
   });
@@ -155,8 +167,5 @@ export async function uploadToYouTube(
     throw new Error(error?.message || 'Failed to upload to YouTube');
   }
 
-  return {
-    videoId: data.videoId,
-    youtubeUrl: data.youtubeUrl,
-  };
+  return { videoId: data.videoId, youtubeUrl: data.youtubeUrl };
 }
