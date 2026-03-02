@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, addDays, addHours, setHours, setMinutes } from "date-fns";
-import { Calendar, Clock, Video, CalendarDays } from "lucide-react";
+import { Calendar, Clock, Video, CalendarDays, Timer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -25,6 +27,14 @@ export interface ScheduleConfig {
   startDate: Date;
   startTime: string;
   hoursBetweenVideos: number;
+  videoDuration: number;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
 interface ScheduleDialogProps {
@@ -32,6 +42,9 @@ interface ScheduleDialogProps {
   onOpenChange: (open: boolean) => void;
   topicsCount: number;
   onConfirm: (config: ScheduleConfig) => void;
+  minDuration?: number;
+  maxDuration?: number;
+  defaultDuration?: number;
 }
 
 export function ScheduleDialog({
@@ -39,13 +52,18 @@ export function ScheduleDialog({
   onOpenChange,
   topicsCount,
   onConfirm,
+  minDuration = 30,
+  maxDuration = 600,
+  defaultDuration = 300,
 }: ScheduleDialogProps) {
   const [videosPerDay, setVideosPerDay] = useState(1);
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState("09:00");
   const [hoursBetweenVideos, setHoursBetweenVideos] = useState(4);
+  const [videoDuration, setVideoDuration] = useState(defaultDuration);
 
   const totalDays = Math.ceil(topicsCount / videosPerDay);
+  const isShort = videoDuration <= 60;
 
   const handleConfirm = () => {
     onConfirm({
@@ -53,6 +71,7 @@ export function ScheduleDialog({
       startDate,
       startTime,
       hoursBetweenVideos,
+      videoDuration,
     });
   };
 
@@ -89,6 +108,35 @@ export function ScheduleDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Video Duration */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Timer className="h-4 w-4" />
+              <Label className="font-semibold text-sm">Script / Video Duration</Label>
+              <Badge variant={isShort ? "secondary" : "default"} className="ml-auto text-xs">
+                {isShort ? '🎬 YouTube Short' : '📺 Standard Video'}
+              </Badge>
+            </div>
+            <Slider
+              value={[videoDuration]}
+              onValueChange={([v]) => setVideoDuration(v)}
+              min={minDuration}
+              max={maxDuration}
+              step={30}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{formatDuration(minDuration)}</span>
+              <span className="font-medium text-foreground">{formatDuration(videoDuration)}</span>
+              <span>{formatDuration(maxDuration)}</span>
+            </div>
+            {isShort && (
+              <p className="text-[10px] text-muted-foreground">
+                Videos ≤ 1 minute will be rendered in vertical 9:16 format for YouTube Shorts
+              </p>
+            )}
+          </div>
+
           {/* Videos per day */}
           <div className="space-y-2">
             <Label htmlFor="videosPerDay" className="flex items-center gap-2">

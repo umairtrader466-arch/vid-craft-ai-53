@@ -12,10 +12,13 @@ import { toast } from "@/hooks/use-toast";
 import type { VideoTopic } from "@/types/video";
 
 interface CSVUploaderProps {
-  onTopicsLoaded: (topics: VideoTopic[]) => void;
+  onTopicsLoaded: (topics: VideoTopic[], videoDuration: number) => void;
+  minDuration?: number;
+  maxDuration?: number;
+  defaultDuration?: number;
 }
 
-export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
+export function CSVUploader({ onTopicsLoaded, minDuration, maxDuration, defaultDuration }: CSVUploaderProps) {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -74,6 +77,7 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
   }, []);
 
   const handleScheduleConfirm = useCallback(async (config: ScheduleConfig) => {
+    const chosenDuration = config.videoDuration;
     if (!user) {
       toast({
         title: "Error",
@@ -103,6 +107,7 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
         topic: topic.topic,
         status: 'pending',
         scheduled_at: scheduledAt.toISOString(),
+        script_duration_minutes: Math.round(chosenDuration / 60),
       };
     });
 
@@ -121,9 +126,10 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
         status: row.status as VideoTopic['status'],
         createdAt: new Date(row.created_at),
         scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
+        durationSeconds: row.script_duration_minutes ? row.script_duration_minutes * 60 : chosenDuration,
       }));
 
-      onTopicsLoaded(savedTopics);
+      onTopicsLoaded(savedTopics, chosenDuration);
       toast({
         title: "Topics saved!",
         description: `${savedTopics.length} topics scheduled for publishing`,
@@ -292,13 +298,15 @@ export function CSVUploader({ onTopicsLoaded }: CSVUploaderProps) {
         onOpenChange={(open) => {
           setShowScheduleDialog(open);
           if (!open && pendingTopics.length > 0) {
-            // User cancelled - clear file
             setFile(null);
             setPendingTopics([]);
           }
         }}
         topicsCount={pendingTopics.length}
         onConfirm={handleScheduleConfirm}
+        minDuration={minDuration}
+        maxDuration={maxDuration}
+        defaultDuration={defaultDuration}
       />
 
       {isSaving && (

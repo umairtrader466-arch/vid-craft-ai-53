@@ -73,8 +73,14 @@ serve(async (req) => {
     console.log(`Rendering ${isShort ? 'SHORT' : 'LANDSCAPE'} video (${width}x${height}) for: "${topic}" (${targetDuration}s)`);
 
     const audioUrl = await uploadAudioToStorage(audioBase64);
-    const visualCount = visuals.length;
-    const segmentDuration = targetDuration / visualCount;
+
+    // Limit visuals so each one shows for at least 4 seconds (shorts) or 5 seconds (standard)
+    const minSegmentDuration = isShort ? 4 : 5;
+    const maxVisuals = Math.max(1, Math.floor(targetDuration / minSegmentDuration));
+    const usedVisuals = visuals.slice(0, maxVisuals);
+    const visualCount = usedVisuals.length;
+    console.log(`Using ${visualCount} of ${visuals.length} visuals, ${segmentDuration.toFixed(1)}s per segment`);
+    const segmentDurationRounded = segmentDuration;
 
     const elements: any[] = [];
 
@@ -88,21 +94,33 @@ serve(async (req) => {
     });
 
     // Visual elements
-    visuals.forEach((visual, index) => {
+    usedVisuals.forEach((visual, index) => {
       const startTime = index * segmentDuration;
+      const crossfade = isShort ? 0.3 : 0.5;
       const element: any = {
         type: visual.type === 'video' ? 'video' : 'image',
         track: 2,
         time: startTime,
-        duration: segmentDuration + 0.5,
+        duration: segmentDuration + crossfade,
         source: visual.url,
         fit: 'cover',
         x: '50%',
         y: '50%',
         width: '100%',
         height: '100%',
-        animations: [{ type: 'fade', duration: 0.5 }],
+        animations: [{ type: 'fade', duration: crossfade }],
       };
+
+      // Add subtle Ken Burns effect for images to avoid static feel
+      if (visual.type === 'image') {
+        element.animations.push({
+          type: 'scale',
+          start_scale: '100%',
+          end_scale: '110%',
+          duration: segmentDuration,
+          easing: 'linear',
+        });
+      }
 
       if (visual.type === 'video') {
         element.audio_volume = '0%';
