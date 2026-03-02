@@ -94,8 +94,9 @@ const Index = () => {
     });
   }, []);
 
-  const handleTopicsLoaded = useCallback((newTopics: VideoTopic[]) => {
+  const handleTopicsLoaded = useCallback((newTopics: VideoTopic[], duration: number) => {
     setTopics(newTopics);
+    setVideoDuration(duration);
     setPipelineSteps(prev => prev.map(step => step.id === 'csv' ? { ...step, status: 'completed' } : step));
     toast({ title: "Topics loaded!", description: `${newTopics.length} topics ready for processing` });
   }, []);
@@ -108,13 +109,16 @@ const Index = () => {
     const topic = topics.find(t => t.id === id);
     if (!topic) return;
 
+    // Use per-topic duration if saved, otherwise fall back to global setting
+    const topicDuration = topic.durationSeconds || videoDuration;
+
     // Save duration to DB
-    const durationMinutes = Math.round(videoDuration / 60);
+    const durationMinutes = Math.round(topicDuration / 60);
     await supabase.from('video_topics').update({ script_duration_minutes: durationMinutes }).eq('id', id);
 
     setPipelineSteps(prev => prev.map(step => step.id === 'script' ? { ...step, status: 'processing' } : step));
     const effectiveProvider = settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3';
-    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, effectiveProvider, selectedTtsmp3Voice, videoDuration);
+    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, effectiveProvider, selectedTtsmp3Voice, topicDuration);
   }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice, canCreateVideo, userLimits, settings, videoDuration]);
 
   const handleProcessAll = useCallback(async () => {

@@ -4,10 +4,7 @@ import { CSVUploader } from "@/components/CSVUploader";
 import { StatsBar } from "@/components/StatsBar";
 import { TopicList } from "@/components/TopicList";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Timer } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { AlertCircle } from "lucide-react";
 import type { VideoTopic, PipelineStep } from "@/types/video";
 
 interface CreateVideoTabProps {
@@ -22,18 +19,11 @@ interface CreateVideoTabProps {
   onDurationChange: (d: number) => void;
   minDuration: number;
   maxDuration: number;
-  onTopicsLoaded: (topics: VideoTopic[]) => void;
+  onTopicsLoaded: (topics: VideoTopic[], duration: number) => void;
   onProcess: (id: string) => void;
   onRegenerate: (id: string, step: string) => void;
   onProcessAll: () => void;
   onUploadComplete: (id: string, youtubeUrl: string) => void;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
 export function CreateVideoTab({
@@ -54,8 +44,6 @@ export function CreateVideoTab({
   onProcessAll,
   onUploadComplete,
 }: CreateVideoTabProps) {
-  const isShort = videoDuration <= 60;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -84,40 +72,14 @@ export function CreateVideoTab({
 
       <PipelineProgress steps={pipelineSteps} />
 
-      {/* Duration Selector */}
-      <div className="glass rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Timer className="w-4 h-4 text-primary" />
-          <Label className="font-semibold text-sm">Video Duration</Label>
-          <Badge variant={isShort ? "secondary" : "default"} className="ml-auto text-xs">
-            {isShort ? '🎬 YouTube Short' : '📺 Standard Video'}
-          </Badge>
-        </div>
-        <div className="space-y-2">
-          <Slider
-            value={[videoDuration]}
-            onValueChange={([v]) => onDurationChange(v)}
-            min={minDuration}
-            max={maxDuration}
-            step={30}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{formatDuration(minDuration)}</span>
-            <span className="font-medium text-foreground">{formatDuration(videoDuration)}</span>
-            <span>{formatDuration(maxDuration)}</span>
-          </div>
-          {isShort && (
-            <p className="text-[10px] text-muted-foreground">
-              Videos ≤ 1 minute will be rendered in vertical 9:16 format for YouTube Shorts
-            </p>
-          )}
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <CSVUploader onTopicsLoaded={onTopicsLoaded} />
+          <CSVUploader
+            onTopicsLoaded={onTopicsLoaded}
+            minDuration={minDuration}
+            maxDuration={maxDuration}
+            defaultDuration={videoDuration}
+          />
         </div>
         <div className="lg:col-span-2">
           <StatsBar topics={topics} />
