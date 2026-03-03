@@ -51,6 +51,9 @@ const Index = () => {
           createdAt: new Date(row.created_at),
           scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
           durationSeconds: row.script_duration_minutes ? row.script_duration_minutes * 60 : undefined,
+          voiceProvider: (row as any).voice_provider || undefined,
+          voiceId: (row as any).voice_id || undefined,
+          privacyStatus: (row as any).privacy_status || undefined,
         }));
 
         setTopics(loadedTopics);
@@ -117,8 +120,11 @@ const Index = () => {
     await supabase.from('video_topics').update({ script_duration_minutes: durationMinutes }).eq('id', id);
 
     setPipelineSteps(prev => prev.map(step => step.id === 'script' ? { ...step, status: 'processing' } : step));
-    const effectiveProvider = settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3';
-    await processVideoTopic(id, topic.topic, selectedVoice, updateTopic, effectiveProvider, selectedTtsmp3Voice, topicDuration);
+    
+    // Use per-topic voice settings if available, otherwise fall back to global settings
+    const effectiveProvider = topic.voiceProvider || (settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3');
+    const effectiveVoiceId = topic.voiceId || (effectiveProvider === 'elevenlabs' ? selectedVoice : selectedTtsmp3Voice);
+    await processVideoTopic(id, topic.topic, effectiveVoiceId, updateTopic, effectiveProvider, effectiveVoiceId, topicDuration);
   }, [topics, selectedVoice, updateTopic, voiceProvider, selectedTtsmp3Voice, canCreateVideo, userLimits, settings, videoDuration]);
 
   const handleProcessAll = useCallback(async () => {
@@ -188,6 +194,10 @@ const Index = () => {
                 onRegenerate={handleRegenerate}
                 onProcessAll={handleProcessAll}
                 onUploadComplete={handleUploadComplete}
+                elevenlabsEnabled={settings.elevenlabsEnabled}
+                defaultVoiceProvider={settings.elevenlabsEnabled ? voiceProvider : 'ttsmp3'}
+                defaultVoiceId={selectedVoice}
+                defaultTtsmp3Voice={selectedTtsmp3Voice}
               />
             </TabsContent>
 

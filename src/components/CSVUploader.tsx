@@ -16,9 +16,14 @@ interface CSVUploaderProps {
   minDuration?: number;
   maxDuration?: number;
   defaultDuration?: number;
+  elevenlabsEnabled?: boolean;
+  defaultVoiceProvider?: 'elevenlabs' | 'ttsmp3';
+  defaultVoiceId?: string;
+  defaultTtsmp3Voice?: string;
+  defaultPrivacy?: 'public' | 'unlisted';
 }
 
-export function CSVUploader({ onTopicsLoaded, minDuration, maxDuration, defaultDuration }: CSVUploaderProps) {
+export function CSVUploader({ onTopicsLoaded, minDuration, maxDuration, defaultDuration, elevenlabsEnabled, defaultVoiceProvider, defaultVoiceId, defaultTtsmp3Voice, defaultPrivacy }: CSVUploaderProps) {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -108,6 +113,9 @@ export function CSVUploader({ onTopicsLoaded, minDuration, maxDuration, defaultD
         status: 'pending',
         scheduled_at: scheduledAt.toISOString(),
         script_duration_minutes: Math.round(chosenDuration / 60),
+        voice_provider: config.voiceProvider,
+        voice_id: config.voiceId,
+        privacy_status: config.privacyStatus,
       };
     });
 
@@ -307,6 +315,11 @@ export function CSVUploader({ onTopicsLoaded, minDuration, maxDuration, defaultD
         minDuration={minDuration}
         maxDuration={maxDuration}
         defaultDuration={defaultDuration}
+        elevenlabsEnabled={elevenlabsEnabled}
+        defaultVoiceProvider={defaultVoiceProvider}
+        defaultVoiceId={defaultVoiceId}
+        defaultTtsmp3Voice={defaultTtsmp3Voice}
+        defaultPrivacy={defaultPrivacy}
       />
 
       {isSaving && (

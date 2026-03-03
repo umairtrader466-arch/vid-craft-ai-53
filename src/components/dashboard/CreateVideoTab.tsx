@@ -24,6 +24,10 @@ interface CreateVideoTabProps {
   onRegenerate: (id: string, step: string) => void;
   onProcessAll: () => void;
   onUploadComplete: (id: string, youtubeUrl: string) => void;
+  elevenlabsEnabled?: boolean;
+  defaultVoiceProvider?: 'elevenlabs' | 'ttsmp3';
+  defaultVoiceId?: string;
+  defaultTtsmp3Voice?: string;
 }
 
 export function CreateVideoTab({
@@ -43,6 +47,10 @@ export function CreateVideoTab({
   onRegenerate,
   onProcessAll,
   onUploadComplete,
+  elevenlabsEnabled,
+  defaultVoiceProvider,
+  defaultVoiceId,
+  defaultTtsmp3Voice,
 }: CreateVideoTabProps) {
   return (
     <motion.div
@@ -79,6 +87,11 @@ export function CreateVideoTab({
             minDuration={minDuration}
             maxDuration={maxDuration}
             defaultDuration={videoDuration}
+            elevenlabsEnabled={elevenlabsEnabled}
+            defaultVoiceProvider={defaultVoiceProvider}
+            defaultVoiceId={defaultVoiceId}
+            defaultTtsmp3Voice={defaultTtsmp3Voice}
+            defaultPrivacy={youtubePrivacy}
           />
         </div>
         <div className="lg:col-span-2">

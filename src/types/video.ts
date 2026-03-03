@@ -28,6 +28,9 @@ export interface VideoTopic {
   createdAt: Date;
   scheduledAt?: Date;
   durationSeconds?: number;
+  voiceProvider?: 'elevenlabs' | 'ttsmp3';
+  voiceId?: string;
+  privacyStatus?: 'public' | 'unlisted';
 }
 
 export interface VisualAsset {
