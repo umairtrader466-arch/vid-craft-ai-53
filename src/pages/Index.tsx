@@ -182,7 +182,7 @@ const Index = () => {
                 videoDuration={videoDuration}
                 onDurationChange={setVideoDuration}
                 minDuration={settings.minVideoDurationSeconds}
-                maxDuration={settings.maxVideoDurationSeconds}
+                maxDuration={settings.longVideoEnabled ? settings.maxVideoDurationSeconds : 60}
                 onTopicsLoaded={handleTopicsLoaded}
                 onProcess={handleProcess}
                 onRegenerate={handleRegenerate}

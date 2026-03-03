@@ -78,6 +78,7 @@ export default function Admin() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [elevenlabsEnabled, setElevenlabsEnabled] = useState(true);
+  const [longVideoEnabled, setLongVideoEnabled] = useState(true);
   const [defaultLimit, setDefaultLimit] = useState(10);
   const [minDuration, setMinDuration] = useState(30);
   const [maxDuration, setMaxDuration] = useState(1200);
@@ -110,6 +111,7 @@ export default function Admin() {
         settingsData.forEach((s) => {
           const val = typeof s.value === 'string' ? s.value : JSON.stringify(s.value);
           if (s.key === 'elevenlabs_enabled') setElevenlabsEnabled(val === 'true');
+          if (s.key === 'long_video_enabled') setLongVideoEnabled(val === 'true');
           if (s.key === 'default_monthly_video_limit') setDefaultLimit(parseInt(val) || 10);
           if (s.key === 'min_video_duration_seconds') setMinDuration(parseInt(val) || 30);
           if (s.key === 'max_video_duration_seconds') setMaxDuration(parseInt(val) || 1200);
@@ -139,6 +141,7 @@ export default function Admin() {
       const now = new Date().toISOString();
       const updates = [
         { key: 'elevenlabs_enabled', value: JSON.stringify(elevenlabsEnabled) },
+        { key: 'long_video_enabled', value: JSON.stringify(longVideoEnabled) },
         { key: 'default_monthly_video_limit', value: JSON.stringify(defaultLimit) },
         { key: 'min_video_duration_seconds', value: JSON.stringify(minDuration) },
         { key: 'max_video_duration_seconds', value: JSON.stringify(maxDuration) },
@@ -343,6 +346,19 @@ export default function Admin() {
               <Switch
                 checked={elevenlabsEnabled}
                 onCheckedChange={setElevenlabsEnabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm">Allow Long Videos ({">"} 1 min)</Label>
+                <p className="text-xs text-muted-foreground">
+                  When disabled, users can only create ≤ 60s YouTube Shorts
+                </p>
+              </div>
+              <Switch
+                checked={longVideoEnabled}
+                onCheckedChange={setLongVideoEnabled}
               />
             </div>
 

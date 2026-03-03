@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface AppSettings {
   elevenlabsEnabled: boolean;
+  longVideoEnabled: boolean;
   defaultMonthlyVideoLimit: number;
   minVideoDurationSeconds: number;
   maxVideoDurationSeconds: number;
@@ -19,6 +20,7 @@ export function useAppSettings() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<AppSettings>({
     elevenlabsEnabled: true,
+    longVideoEnabled: true,
     defaultMonthlyVideoLimit: 10,
     minVideoDurationSeconds: 30,
     maxVideoDurationSeconds: 1200,
@@ -46,6 +48,7 @@ export function useAppSettings() {
 
         setSettings({
           elevenlabsEnabled: mapped['elevenlabs_enabled'] === 'true',
+          longVideoEnabled: mapped['long_video_enabled'] !== 'false',
           defaultMonthlyVideoLimit: parseInt(mapped['default_monthly_video_limit'] || '10'),
           minVideoDurationSeconds: parseInt(mapped['min_video_duration_seconds'] || '30'),
           maxVideoDurationSeconds: parseInt(mapped['max_video_duration_seconds'] || '1200'),
