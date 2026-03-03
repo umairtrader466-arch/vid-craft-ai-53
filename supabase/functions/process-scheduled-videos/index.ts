@@ -44,6 +44,9 @@ serve(async (req) => {
         await supabase.from('video_topics').update({ status: 'script_generating' }).eq('id', topic.id);
 
         const durationSeconds = (topic.script_duration_minutes || 5) * 60;
+        const topicVoiceProvider = topic.voice_provider || 'ttsmp3';
+        const topicVoiceId = topic.voice_id || 'Kimberly';
+        const topicPrivacy = topic.privacy_status || 'unlisted';
 
         // Step 1: Generate Script
         const scriptRes = await fetch(`${supabaseUrl}/functions/v1/generate-script`, {
@@ -59,14 +62,25 @@ serve(async (req) => {
           script: scriptData.script 
         }).eq('id', topic.id);
 
-        // Step 2: Generate Voice (use TTSMP3 for cron - no user preference stored)
-        const voiceRes = await fetch(`${supabaseUrl}/functions/v1/generate-voice-ttsmp3`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
-          body: JSON.stringify({ script: scriptData.script, lang: 'Joanna' }),
-        });
-        if (!voiceRes.ok) throw new Error(`Voice generation failed: ${await voiceRes.text()}`);
-        const voiceData = await voiceRes.json();
+        // Step 2: Generate Voice using per-topic settings
+        let voiceData: any;
+        if (topicVoiceProvider === 'elevenlabs') {
+          const voiceRes = await fetch(`${supabaseUrl}/functions/v1/generate-voice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+            body: JSON.stringify({ script: scriptData.script, voiceId: topicVoiceId }),
+          });
+          if (!voiceRes.ok) throw new Error(`Voice generation failed: ${await voiceRes.text()}`);
+          voiceData = await voiceRes.json();
+        } else {
+          const voiceRes = await fetch(`${supabaseUrl}/functions/v1/generate-voice-ttsmp3`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+            body: JSON.stringify({ script: scriptData.script, lang: topicVoiceId }),
+          });
+          if (!voiceRes.ok) throw new Error(`Voice generation failed: ${await voiceRes.text()}`);
+          voiceData = await voiceRes.json();
+        }
 
         await supabase.from('video_topics').update({ status: 'visuals_fetching' }).eq('id', topic.id);
 
@@ -183,7 +197,7 @@ serve(async (req) => {
               topic: topic.topic,
               script: scriptData.script,
               accessToken,
-              privacyStatus: 'unlisted',
+              privacyStatus: topicPrivacy,
             }),
           });
 

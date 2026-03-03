@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, addDays, addHours, setHours, setMinutes } from "date-fns";
-import { Calendar, Clock, Video, CalendarDays, Timer } from "lucide-react";
+import { Calendar, Clock, Video, CalendarDays, Timer, Mic, Youtube } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { VOICE_OPTIONS, TTSMP3_VOICE_OPTIONS, type VoiceProvider } from "@/components/VoiceSettings";
 
 export interface ScheduleConfig {
   videosPerDay: number;
@@ -28,6 +37,9 @@ export interface ScheduleConfig {
   startTime: string;
   hoursBetweenVideos: number;
   videoDuration: number;
+  voiceProvider: VoiceProvider;
+  voiceId: string;
+  privacyStatus: 'public' | 'unlisted';
 }
 
 function formatDuration(seconds: number): string {
@@ -45,6 +57,11 @@ interface ScheduleDialogProps {
   minDuration?: number;
   maxDuration?: number;
   defaultDuration?: number;
+  elevenlabsEnabled?: boolean;
+  defaultVoiceProvider?: VoiceProvider;
+  defaultVoiceId?: string;
+  defaultTtsmp3Voice?: string;
+  defaultPrivacy?: 'public' | 'unlisted';
 }
 
 export function ScheduleDialog({
@@ -55,15 +72,24 @@ export function ScheduleDialog({
   minDuration = 30,
   maxDuration = 600,
   defaultDuration = 300,
+  elevenlabsEnabled = true,
+  defaultVoiceProvider = 'ttsmp3',
+  defaultVoiceId = 'george',
+  defaultTtsmp3Voice = 'Kimberly',
+  defaultPrivacy = 'unlisted',
 }: ScheduleDialogProps) {
   const [videosPerDay, setVideosPerDay] = useState(1);
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState("09:00");
   const [hoursBetweenVideos, setHoursBetweenVideos] = useState(4);
   const [videoDuration, setVideoDuration] = useState(defaultDuration);
+  const [voiceProvider, setVoiceProvider] = useState<VoiceProvider>(defaultVoiceProvider);
+  const [voiceId, setVoiceId] = useState(defaultVoiceProvider === 'elevenlabs' ? defaultVoiceId : defaultTtsmp3Voice);
+  const [privacyStatus, setPrivacyStatus] = useState<'public' | 'unlisted'>(defaultPrivacy);
 
   const totalDays = Math.ceil(topicsCount / videosPerDay);
   const isShort = videoDuration <= 60;
+  const useElevenLabs = elevenlabsEnabled && voiceProvider === 'elevenlabs';
 
   const handleConfirm = () => {
     onConfirm({
@@ -72,6 +98,9 @@ export function ScheduleDialog({
       startTime,
       hoursBetweenVideos,
       videoDuration,
+      voiceProvider: elevenlabsEnabled ? voiceProvider : 'ttsmp3',
+      voiceId,
+      privacyStatus,
     });
   };
 
@@ -95,7 +124,7 @@ export function ScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
@@ -135,6 +164,66 @@ export function ScheduleDialog({
                 Videos ≤ 1 minute will be rendered in vertical 9:16 format for YouTube Shorts
               </p>
             )}
+          </div>
+
+          {/* Voice Selection */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Mic className="h-4 w-4" />
+              <Label className="font-semibold text-sm">Voice</Label>
+            </div>
+            
+            {elevenlabsEnabled && (
+              <div className="flex items-center justify-between">
+                <Label htmlFor="schedule-elevenlabs" className="text-xs text-muted-foreground">
+                  Use ElevenLabs
+                </Label>
+                <Switch
+                  id="schedule-elevenlabs"
+                  checked={useElevenLabs}
+                  onCheckedChange={(checked) => {
+                    const newProvider = checked ? 'elevenlabs' : 'ttsmp3';
+                    setVoiceProvider(newProvider);
+                    setVoiceId(checked ? defaultVoiceId : defaultTtsmp3Voice);
+                  }}
+                />
+              </div>
+            )}
+
+            {useElevenLabs ? (
+              <Select value={voiceId} onValueChange={setVoiceId}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Select voice" /></SelectTrigger>
+                <SelectContent>
+                  {VOICE_OPTIONS.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.name} – {v.description}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={voiceId} onValueChange={setVoiceId}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Select voice" /></SelectTrigger>
+                <SelectContent className="max-h-48">
+                  {TTSMP3_VOICE_OPTIONS.map((v) => (
+                    <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* YouTube Privacy */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Youtube className="h-4 w-4 text-red-500" />
+              <Label className="font-semibold text-sm">YouTube Privacy</Label>
+            </div>
+            <Select value={privacyStatus} onValueChange={(v) => setPrivacyStatus(v as 'public' | 'unlisted')}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public</SelectItem>
+                <SelectItem value="unlisted">Unlisted</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Videos per day */}
@@ -185,42 +274,28 @@ export function ScheduleDialog({
           </div>
 
           {/* Start time */}
-          {/* <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="startTime" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Start time
             </Label>
-            <Input
+            <select
               id="startTime"
-              type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="w-full"
-            />
-          </div> */}
-
-              <div className="space-y-2">
-                <Label htmlFor="startTime" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Start time
-                </Label>
-                <select
-                  id="startTime"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                >
-                  {Array.from({ length: 24 }, (_, i) => {
-                    const hour = i.toString().padStart(2, "0");
-                    const label = i === 0 ? "12 AM (Midnight)" : i < 12 ? `${i} AM` : i === 12 ? "12 PM (Noon)" : `${i - 12} PM`;
-                    return (
-                      <option key={hour} value={`${hour}:00`}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              {Array.from({ length: 24 }, (_, i) => {
+                const hour = i.toString().padStart(2, "0");
+                const label = i === 0 ? "12 AM (Midnight)" : i < 12 ? `${i} AM` : i === 12 ? "12 PM (Noon)" : `${i - 12} PM`;
+                return (
+                  <option key={hour} value={`${hour}:00`}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
 
           {/* Hours between videos */}
           {videosPerDay > 1 && (

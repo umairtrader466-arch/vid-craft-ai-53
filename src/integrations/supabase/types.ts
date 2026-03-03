@@ -117,6 +117,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          privacy_status: string | null
           scheduled_at: string | null
           script: string | null
           script_duration_minutes: number | null
@@ -126,12 +127,15 @@ export type Database = {
           user_id: string
           video_url: string | null
           visuals: Json | null
+          voice_id: string | null
+          voice_provider: string | null
           voice_url: string | null
           youtube_url: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          privacy_status?: string | null
           scheduled_at?: string | null
           script?: string | null
           script_duration_minutes?: number | null
@@ -141,12 +145,15 @@ export type Database = {
           user_id: string
           video_url?: string | null
           visuals?: Json | null
+          voice_id?: string | null
+          voice_provider?: string | null
           voice_url?: string | null
           youtube_url?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          privacy_status?: string | null
           scheduled_at?: string | null
           script?: string | null
           script_duration_minutes?: number | null
@@ -156,6 +163,8 @@ export type Database = {
           user_id?: string
           video_url?: string | null
           visuals?: Json | null
+          voice_id?: string | null
+          voice_provider?: string | null
           voice_url?: string | null
           youtube_url?: string | null
         }
