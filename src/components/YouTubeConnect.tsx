@@ -6,7 +6,8 @@ import {
   getStoredTokens, 
   initiateYouTubeAuth, 
   clearTokens,
-  isTokenExpired
+  isTokenExpired,
+  refreshAccessToken
 } from "@/lib/youtubeAuth";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -30,8 +31,22 @@ export function YouTubeConnect({ privacyStatus, onPrivacyChange }: YouTubeConnec
   useEffect(() => {
     const checkConnection = async () => {
       const tokens = await getStoredTokens();
+      if (!tokens) {
+        setIsConnected(false);
+        setIsChecking(false);
+        return;
+      }
       const expired = await isTokenExpired();
-      setIsConnected(!!tokens && !expired);
+      if (expired) {
+        try {
+          await refreshAccessToken();
+          setIsConnected(true);
+        } catch {
+          setIsConnected(false);
+        }
+      } else {
+        setIsConnected(true);
+      }
       setIsChecking(false);
     };
     checkConnection();
