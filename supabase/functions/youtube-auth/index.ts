@@ -11,7 +11,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, code, redirectUri } = await req.json();
+    const body = await req.json();
+    const { action, code, redirectUri, refreshToken } = body;
 
     const YOUTUBE_CLIENT_ID = Deno.env.get('YOUTUBE_CLIENT_ID');
     const YOUTUBE_CLIENT_SECRET = Deno.env.get('YOUTUBE_CLIENT_SECRET');
@@ -64,7 +65,6 @@ serve(async (req) => {
     }
 
     if (action === 'refresh-token') {
-      const { refreshToken } = await req.json();
       
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
