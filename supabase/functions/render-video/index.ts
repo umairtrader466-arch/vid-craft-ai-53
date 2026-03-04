@@ -79,8 +79,8 @@ serve(async (req) => {
     const maxVisuals = Math.max(1, Math.floor(targetDuration / minSegmentDuration));
     const usedVisuals = visuals.slice(0, maxVisuals);
     const visualCount = usedVisuals.length;
+    const segmentDuration = targetDuration / visualCount;
     console.log(`Using ${visualCount} of ${visuals.length} visuals, ${segmentDuration.toFixed(1)}s per segment`);
-    const segmentDurationRounded = segmentDuration;
 
     const elements: any[] = [];
 
